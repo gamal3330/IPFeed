@@ -144,6 +144,21 @@ def create_schema(db: sqlite3.Connection):
             created_at TEXT NOT NULL DEFAULT ''
         );
 
+        CREATE TABLE IF NOT EXISTS schema_version (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            version INTEGER NOT NULL,
+            migration TEXT NOT NULL DEFAULT '',
+            applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS app_state (
+            namespace TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL DEFAULT '{}',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (namespace, key)
+        );
+
         CREATE INDEX IF NOT EXISTS idx_logs_ip ON logs(ip);
         CREATE INDEX IF NOT EXISTS idx_logs_action ON logs(action);
         CREATE INDEX IF NOT EXISTS idx_logs_user ON logs(user);
@@ -165,6 +180,14 @@ def create_schema(db: sqlite3.Connection):
         CREATE INDEX IF NOT EXISTS idx_login_events_username ON login_events(username);
         CREATE INDEX IF NOT EXISTS idx_login_events_success ON login_events(success);
         CREATE INDEX IF NOT EXISTS idx_login_events_created_at ON login_events(created_at);
+        CREATE INDEX IF NOT EXISTS idx_app_state_updated_at ON app_state(updated_at);
+
+        INSERT INTO schema_version (id, version, migration, applied_at)
+        VALUES (1, 3, '003_ip_metadata.sql', datetime('now'))
+        ON CONFLICT(id) DO UPDATE SET
+            version = CASE WHEN schema_version.version < 3 THEN 3 ELSE schema_version.version END,
+            migration = CASE WHEN schema_version.version < 3 THEN '003_ip_metadata.sql' ELSE schema_version.migration END,
+            applied_at = CASE WHEN schema_version.version < 3 THEN datetime('now') ELSE schema_version.applied_at END;
         """
     )
 
@@ -219,7 +242,7 @@ def import_users(db: sqlite3.Connection, path: Path, force: bool) -> int:
         if user["role"] not in {"admin", "operator", "viewer"}:
             user["role"] = "operator"
 
-        db.execute(
+        cursor = db.execute(
             """
             INSERT OR REPLACE INTO users (
                 username, display_name, password_hash, role, active, must_change_password,
@@ -311,7 +334,7 @@ def import_geo_cache(db: sqlite3.Connection, path: Path, force: bool) -> int:
         if not isinstance(entry, dict):
             continue
 
-        db.execute(
+        cursor = db.execute(
             """
             INSERT OR REPLACE INTO geo_cache (ip, country, country_code, city, isp, updated_at)
             VALUES (:ip, :country, :country_code, :city, :isp, :updated_at)
@@ -326,6 +349,35 @@ def import_geo_cache(db: sqlite3.Connection, path: Path, force: bool) -> int:
             },
         )
         count += 1
+
+    return count
+
+
+def merge_geo_cache(db: sqlite3.Connection, path: Path) -> int:
+    data = load_json(path, {})
+    if not isinstance(data, dict):
+        return 0
+
+    count = 0
+    for ip, entry in data.items():
+        if not isinstance(entry, dict):
+            continue
+
+        cursor = db.execute(
+            """
+            INSERT OR IGNORE INTO geo_cache (ip, country, country_code, city, isp, updated_at)
+            VALUES (:ip, :country, :country_code, :city, :isp, :updated_at)
+            """,
+            {
+                "ip": str(ip),
+                "country": str(entry.get("country") or "Unknown"),
+                "country_code": str(entry.get("country_code") or ""),
+                "city": str(entry.get("city") or "Unknown"),
+                "isp": str(entry.get("isp") or "Unknown"),
+                "updated_at": str(entry.get("updated_at") or ""),
+            },
+        )
+        count += max(0, cursor.rowcount)
 
     return count
 
@@ -363,6 +415,39 @@ def backfill_vt_results(db: sqlite3.Connection, force: bool) -> int:
     return table_count(db, "vt_results")
 
 
+def import_app_state(db: sqlite3.Connection, storage_dir: Path, force: bool) -> int:
+    mappings = [
+        ("vt_settings.json", "virustotal", "settings"),
+        ("vt_rate_limit.json", "virustotal", "rate_limit"),
+        ("login_attempts.json", "auth", "login_attempts"),
+    ]
+    count = 0
+
+    for filename, namespace, key in mappings:
+        existing = db.execute(
+            "SELECT COUNT(*) FROM app_state WHERE namespace = ? AND key = ?",
+            (namespace, key),
+        ).fetchone()[0]
+
+        if existing and not force:
+            continue
+
+        data = load_json(storage_dir / filename, {})
+        if not isinstance(data, dict):
+            continue
+
+        db.execute(
+            """
+            INSERT OR REPLACE INTO app_state (namespace, key, value, updated_at)
+            VALUES (?, ?, ?, datetime('now'))
+            """,
+            (namespace, key, json.dumps(data, ensure_ascii=False, indent=2)),
+        )
+        count += 1
+
+    return count
+
+
 def main():
     parser = argparse.ArgumentParser(description="Migrate IP Feed Manager JSON storage to SQLite.")
     parser.add_argument("--storage-dir", default=str(Path(__file__).resolve().parent))
@@ -379,9 +464,12 @@ def main():
         users = import_users(db, storage_dir / "users.json", args.force)
         logs = import_logs(db, storage_dir / "ips_log.json", args.force)
         geo = import_geo_cache(db, storage_dir / "ip_geo_cache.json", args.force)
+        visitor_geo = merge_geo_cache(db, storage_dir / "visitor_geo_cache.json")
+        app_state = import_app_state(db, storage_dir, args.force)
         vt_results = backfill_vt_results(db, args.force)
         ip_metadata = table_count(db, "ip_metadata")
         login_events = table_count(db, "login_events")
+        schema_version = db.execute("SELECT version FROM schema_version WHERE id = 1").fetchone()[0]
         db.commit()
 
     database.chmod(0o640)
@@ -389,9 +477,12 @@ def main():
     print(f"users_imported={users}")
     print(f"logs_imported={logs}")
     print(f"geo_cache_imported={geo}")
+    print(f"visitor_geo_cache_imported={visitor_geo}")
+    print(f"app_state_imported={app_state}")
     print(f"vt_results_backfilled={vt_results}")
     print(f"ip_metadata={ip_metadata}")
     print(f"login_events={login_events}")
+    print(f"schema_version={schema_version}")
 
 
 if __name__ == "__main__":

@@ -303,6 +303,12 @@ function buildMonitoringHealthPayload(array $options): array
 
             $metrics['logs'] = (int) $db->query('SELECT COUNT(*) FROM logs')->fetchColumn();
             $metrics['users'] = (int) $db->query('SELECT COUNT(*) FROM users')->fetchColumn();
+            $schemaRow = $db->query('SELECT version, migration FROM schema_version WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+            if (is_array($schemaRow)) {
+                $metrics['schema_version'] = (int) ($schemaRow['version'] ?? 0);
+                $metrics['schema_migration'] = (string) ($schemaRow['migration'] ?? '');
+            }
+            $metrics['app_state_rows'] = (int) $db->query('SELECT COUNT(*) FROM app_state')->fetchColumn();
 
             $queueRows = $db->query('SELECT status, COUNT(*) AS total FROM vt_queue GROUP BY status')->fetchAll(PDO::FETCH_ASSOC);
             foreach ($queueRows ?: [] as $row) {

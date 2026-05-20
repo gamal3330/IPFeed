@@ -1,3 +1,18 @@
+CREATE TABLE IF NOT EXISTS schema_version (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    version INTEGER NOT NULL,
+    migration TEXT NOT NULL DEFAULT '',
+    applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS app_state (
+    namespace TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (namespace, key)
+);
+
 CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     display_name TEXT NOT NULL DEFAULT '',
@@ -54,3 +69,11 @@ CREATE INDEX IF NOT EXISTS idx_logs_vt_status ON logs(vt_status);
 CREATE INDEX IF NOT EXISTS idx_logs_vt_asn ON logs(vt_asn);
 CREATE INDEX IF NOT EXISTS idx_geo_cache_country ON geo_cache(country);
 CREATE INDEX IF NOT EXISTS idx_geo_cache_updated_at ON geo_cache(updated_at);
+CREATE INDEX IF NOT EXISTS idx_app_state_updated_at ON app_state(updated_at);
+
+INSERT INTO schema_version (id, version, migration, applied_at)
+VALUES (1, 1, '001_initial.sql', datetime('now'))
+ON CONFLICT(id) DO UPDATE SET
+    version = CASE WHEN excluded.version > schema_version.version THEN excluded.version ELSE schema_version.version END,
+    migration = CASE WHEN excluded.version >= schema_version.version THEN excluded.migration ELSE schema_version.migration END,
+    applied_at = CASE WHEN excluded.version >= schema_version.version THEN excluded.applied_at ELSE schema_version.applied_at END;

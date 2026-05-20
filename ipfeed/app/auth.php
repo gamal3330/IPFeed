@@ -82,6 +82,15 @@ function recentLoginEvents(string $databaseFile, int $limit = 30): array
 
 function updateLoginAttemptState(string $file, callable $callback): mixed
 {
+    if (isSqliteStorage($file)) {
+        try {
+            return sqliteUpdateJsonState($file, 'auth', 'login_attempts', $callback);
+        } catch (Throwable) {
+            $state = [];
+            return $callback($state, false);
+        }
+    }
+
     $dir = dirname($file);
 
     if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) {

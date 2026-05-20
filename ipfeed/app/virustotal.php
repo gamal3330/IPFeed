@@ -57,6 +57,10 @@ Deny from all
 
 function virusTotalSettingsStorageError(string $settingsDir, string $settingsFile): string
 {
+    if (isSqliteStorage($settingsFile)) {
+        return databaseStorageError($settingsFile);
+    }
+
     $dirIssue = ensurePrivateSettingsDir($settingsDir);
 
     if ($dirIssue !== '') {
@@ -72,6 +76,10 @@ function virusTotalSettingsStorageError(string $settingsDir, string $settingsFil
 
 function readVirusTotalSettings(string $settingsFile): array
 {
+    if (isSqliteStorage($settingsFile)) {
+        return sqliteReadJsonState($settingsFile, 'virustotal', 'settings', []);
+    }
+
     if (!file_exists($settingsFile)) {
         return [];
     }
@@ -91,6 +99,11 @@ function saveVirusTotalSettings(string $settingsFile, array $settings): void
 {
     $settings['updated_at'] = $settings['updated_at'] ?? date('Y-m-d H:i:s');
 
+    if (isSqliteStorage($settingsFile)) {
+        sqliteWriteJsonState($settingsFile, 'virustotal', 'settings', $settings);
+        return;
+    }
+
     file_put_contents(
         $settingsFile,
         json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
@@ -109,8 +122,8 @@ function resolveVirusTotalConfig(string $settingsFile, string $envApiKey): array
     if ($savedKey !== '') {
         return [
             'api_key' => $savedKey,
-            'source' => 'admin_file',
-            'source_label' => 'لوحة المدير',
+            'source' => isSqliteStorage($settingsFile) ? 'sqlite' : 'admin_file',
+            'source_label' => isSqliteStorage($settingsFile) ? 'SQLite' : 'لوحة المدير',
             'masked' => maskSecret($savedKey),
             'has_saved_key' => true,
             'has_env_key' => $envApiKey !== '',
@@ -176,6 +189,70 @@ function acquireVirusTotalQuotaSlot(): array
     $now = time();
     $todayUtc = gmdate('Y-m-d', $now);
     $tomorrowUtc = strtotime($todayUtc . ' 00:00:00 UTC +1 day');
+
+    if (isSqliteStorage($vtRateLimitFile)) {
+        try {
+            $result = sqliteUpdateJsonState($vtRateLimitFile, 'virustotal', 'rate_limit', function (array &$state, bool $persistent) use ($now, $todayUtc, $tomorrowUtc, $vtDailyQuota, $vtMinIntervalSeconds, $vtMaxServerWaitSeconds): array {
+                if (!is_array($state) || (($state['day_utc'] ?? '') !== $todayUtc)) {
+                    $state = [
+                        'day_utc' => $todayUtc,
+                        'daily_count' => 0,
+                        'next_allowed_at' => 0,
+                        'last_request_at' => 0,
+                    ];
+                }
+
+                $dailyCount = max(0, (int) ($state['daily_count'] ?? 0));
+
+                if ($dailyCount >= $vtDailyQuota) {
+                    $waitSeconds = is_int($tomorrowUtc) ? max(0, $tomorrowUtc - $now) : 86400;
+
+                    return [
+                        'allowed' => false,
+                        'wait_seconds' => $waitSeconds,
+                        'message' => 'تم بلوغ حد VirusTotal اليومي لهذا المفتاح (' . $vtDailyQuota . ' طلب/يوم). أعد المحاولة بعد ' . secondsToHumanArabic($waitSeconds) . ' أو استخدم اشتراكاً مناسباً.',
+                    ];
+                }
+
+                $nextAllowedAt = max(0, (int) ($state['next_allowed_at'] ?? 0));
+                $scheduledAt = max($now, $nextAllowedAt);
+                $waitSeconds = max(0, $scheduledAt - $now);
+
+                if ($waitSeconds > $vtMaxServerWaitSeconds) {
+                    return [
+                        'allowed' => false,
+                        'wait_seconds' => $waitSeconds,
+                        'message' => 'تم تأجيل الفحص لتجنب خطأ 429. أعد المحاولة بعد ' . secondsToHumanArabic($waitSeconds) . '.',
+                    ];
+                }
+
+                $state['day_utc'] = $todayUtc;
+                $state['daily_count'] = $dailyCount + 1;
+                $state['last_request_at'] = $now;
+                $state['next_allowed_at'] = $scheduledAt + max(1, (int) $vtMinIntervalSeconds);
+                $state['updated_at'] = gmdate('Y-m-d H:i:s') . ' UTC';
+
+                return [
+                    'allowed' => true,
+                    'wait_seconds' => $waitSeconds,
+                    'message' => $persistent ? '' : 'تعذر حفظ حالة حد VirusTotal.',
+                    'daily_remaining' => max(0, $vtDailyQuota - ($dailyCount + 1)),
+                ];
+            });
+
+            if (($result['allowed'] ?? false) && (int) ($result['wait_seconds'] ?? 0) > 0) {
+                sleep((int) $result['wait_seconds']);
+            }
+
+            return $result;
+        } catch (Throwable $exception) {
+            return [
+                'allowed' => false,
+                'wait_seconds' => 0,
+                'message' => 'تعذر تحديث حد VirusTotal في SQLite: ' . $exception->getMessage(),
+            ];
+        }
+    }
 
     if (!is_dir(dirname($vtRateLimitFile))) {
         return [
@@ -279,7 +356,13 @@ function virusTotalQuotaSnapshot(): array
     $todayUtc = gmdate('Y-m-d', $now);
     $state = [];
 
-    if (file_exists($vtRateLimitFile)) {
+    if (isSqliteStorage($vtRateLimitFile)) {
+        try {
+            $state = sqliteReadJsonState($vtRateLimitFile, 'virustotal', 'rate_limit', []);
+        } catch (Throwable) {
+            $state = [];
+        }
+    } elseif (file_exists($vtRateLimitFile)) {
         $raw = file_get_contents($vtRateLimitFile);
         $decoded = is_string($raw) && trim($raw) !== '' ? json_decode($raw, true) : [];
         $state = is_array($decoded) ? $decoded : [];

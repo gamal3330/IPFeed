@@ -19,10 +19,10 @@ return [
         'users' => __DIR__ . '/ip_feed.sqlite',
         'log' => __DIR__ . '/ip_feed.sqlite',
         'geo_cache' => __DIR__ . '/ip_feed.sqlite',
-        'visitor_geo_cache' => __DIR__ . '/visitor_geo_cache.json',
-        'vt_settings' => __DIR__ . '/vt_settings.json',
-        'vt_rate_limit' => __DIR__ . '/vt_rate_limit.json',
-        'login_rate_limit' => __DIR__ . '/login_attempts.json',
+        'visitor_geo_cache' => __DIR__ . '/ip_feed.sqlite',
+        'vt_settings' => __DIR__ . '/ip_feed.sqlite',
+        'vt_rate_limit' => __DIR__ . '/ip_feed.sqlite',
+        'login_rate_limit' => __DIR__ . '/ip_feed.sqlite',
     ],
 
     'operations' => [
@@ -48,6 +48,10 @@ return [
         'users' => __DIR__ . '/users.json',
         'log' => __DIR__ . '/ips_log.json',
         'geo_cache' => __DIR__ . '/ip_geo_cache.json',
+        'visitor_geo_cache' => __DIR__ . '/visitor_geo_cache.json',
+        'vt_settings' => __DIR__ . '/vt_settings.json',
+        'vt_rate_limit' => __DIR__ . '/vt_rate_limit.json',
+        'login_rate_limit' => __DIR__ . '/login_attempts.json',
     ],
 
     'ui' => [

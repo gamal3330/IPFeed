@@ -24,3 +24,10 @@ CREATE INDEX IF NOT EXISTS idx_ip_metadata_updated_by ON ip_metadata(updated_by)
 CREATE INDEX IF NOT EXISTS idx_login_events_username ON login_events(username);
 CREATE INDEX IF NOT EXISTS idx_login_events_success ON login_events(success);
 CREATE INDEX IF NOT EXISTS idx_login_events_created_at ON login_events(created_at);
+
+INSERT INTO schema_version (id, version, migration, applied_at)
+VALUES (1, 3, '003_ip_metadata.sql', datetime('now'))
+ON CONFLICT(id) DO UPDATE SET
+    version = CASE WHEN excluded.version > schema_version.version THEN excluded.version ELSE schema_version.version END,
+    migration = CASE WHEN excluded.version >= schema_version.version THEN excluded.migration ELSE schema_version.migration END,
+    applied_at = CASE WHEN excluded.version >= schema_version.version THEN excluded.applied_at ELSE schema_version.applied_at END;

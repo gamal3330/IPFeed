@@ -63,9 +63,6 @@ chmod 750 ip-feed-manager-private/logs ip-feed-manager-private/backups
 
 - `ipfeed/ips.txt`
 - `ip-feed-manager-private/ip_feed.sqlite`
-- `ip-feed-manager-private/vt_rate_limit.json`
-- `ip-feed-manager-private/vt_settings.json`
-- `ip-feed-manager-private/login_attempts.json`
 - `ip-feed-manager-private/logs/`
 - `ip-feed-manager-private/backups/`
 
@@ -77,11 +74,23 @@ chmod 750 ip-feed-manager-private/logs ip-feed-manager-private/backups
 python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite
 ```
 
+أسماء migrations الحالية:
+
+```text
+ip-feed-manager-private/migrations/001_initial.sql
+ip-feed-manager-private/migrations/002_vt_queue.sql
+ip-feed-manager-private/migrations/003_ip_metadata.sql
+```
+
+يحفظ النظام رقم النسخة في جدول `schema_version`.
+
 عند وجود ملفات JSON قديمة، شغل:
 
 ```bash
 python3 ip-feed-manager-private/migrate_json_to_sqlite.py --storage-dir ip-feed-manager-private
 ```
+
+بعد هذه المرحلة تصبح إعدادات VirusTotal وحدود الطلبات ومحاولات الدخول داخل جدول `app_state` في SQLite. تبقى ملفات JSON القديمة كأثر ترحيل فقط، وليست التخزين النشط.
 
 للتحقق من قاعدة البيانات:
 
@@ -146,6 +155,14 @@ sudo systemctl status ipfeed-vt-worker.timer
 python3 ip-feed-manager-private/backup.py --retention-days=14
 ```
 
+استعادة نسخة من manifest:
+
+```bash
+python3 ip-feed-manager-private/backup.py restore --manifest backup_YYYYMMDD_HHMMSS.json
+```
+
+يمكن أيضًا إنشاء واستعادة النسخ من صفحة `Settings` داخل الواجهة. عند الاستعادة ينشئ النظام نسخة `pre_restore` تلقائيًا قبل استبدال SQLite و `ips.txt`.
+
 تفعيل النسخ اليومي عبر systemd:
 
 ```bash
@@ -182,6 +199,8 @@ ipfeed/index.php?page=health
 - صلاحيات مجلد الإعدادات الخاصة.
 - حماية `.htaccess`.
 - اتصال SQLite وسلامة `integrity_check`.
+- رقم `schema_version`.
+- جدول `app_state` لحالات التشغيل الموحدة.
 - حالة مفتاح VirusTotal والطابور.
 - حالة سجلات التشغيل.
 - آخر نسخة احتياطية.
@@ -215,7 +234,7 @@ curl -H 'X-IPFeed-Health-Token: change-this-long-random-token' https://example.c
 3. استبدل ملفات التطبيق.
 4. شغل `composer install --no-dev --optimize-autoloader` إذا كان Composer متاحا.
 5. شغل `python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite`.
-6. شغل سكربت ترحيل JSON عند الحاجة.
+6. شغل سكربت ترحيل JSON عند الحاجة لنقل أي بقايا إلى SQLite.
 7. شغل `python3 ip-feed-manager-private/backup.py --retention-days=14` للتأكد أن النسخ الاحتياطي يعمل.
 8. افتح صفحة صحة النظام وتأكد من عدم وجود أخطاء.
 9. تأكد أن systemd timers تعمل:

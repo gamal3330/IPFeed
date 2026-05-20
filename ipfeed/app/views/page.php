@@ -2085,7 +2085,87 @@ if (!defined('IP_FEED_APP')) {
                     <span class="small-meta" style="margin-right: 10px;">إذا كان VT_API_KEY مضبوطاً كمتغير بيئة، سيبقى مستخدماً بعد حذف المفتاح المحفوظ.</span>
                 </form>
 
-                <p class="note">لحماية المفتاح، يتم حفظه في ملف <strong>vt_settings.json</strong> داخل مجلد الإعدادات الخاصة: <span class="kbd"><?= e($appSettingsDir) ?></span>. الأفضل جعل هذا المجلد خارج <strong>public_html</strong> أو <strong>/var/www/html</strong>.</p>
+                <p class="note">لحماية المفتاح، يتم حفظ إعدادات VirusTotal داخل جدول <strong>app_state</strong> في SQLite. ملفات JSON القديمة تبقى للترحيل فقط ولا يعتمد عليها النظام بعد اكتمال النقل.</p>
+            </div>
+        </section>
+
+        <section class="grid">
+            <div class="card span-12">
+                <div class="card-head">
+                    <div>
+                        <h2>SQLite والنسخ الاحتياطي</h2>
+                        <p>إنشاء نسخة احتياطية من قاعدة SQLite وملف ips.txt، أو استعادة نسخة محفوظة من مجلد backups.</p>
+                    </div>
+                    <span class="kbd">schema v<?= number_format((int) ($schemaVersion['version'] ?? 0)) ?></span>
+                </div>
+
+                <div class="stats" style="margin-bottom: 18px;">
+                    <div class="stat-panel">
+                        <div class="stat-label">Schema version</div>
+                        <div class="stat-value" style="font-size: 20px;"><?= number_format((int) ($schemaVersion['version'] ?? 0)) ?></div>
+                        <div class="stat-help"><?= e((string) ($schemaVersion['migration'] ?? '')) ?></div>
+                    </div>
+                    <div class="stat-panel">
+                        <div class="stat-label">مجلد النسخ</div>
+                        <div class="stat-value" style="font-size: 20px; direction: ltr; text-align: left;"><?= e($backupDir) ?></div>
+                        <div class="stat-help">الاحتفاظ: <?= number_format($backupRetentionDays) ?> يوم</div>
+                    </div>
+                    <div class="stat-panel">
+                        <div class="stat-label">النسخ المعروضة</div>
+                        <div class="stat-value" style="font-size: 20px;"><?= number_format(count($backupManifests)) ?></div>
+                        <div class="stat-help">آخر 10 ملفات manifest</div>
+                    </div>
+                </div>
+
+                <form method="post" class="inline-form">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="backup_action" value="create">
+                    <button class="btn" type="submit"><?= iconSvg('download') ?> إنشاء نسخة الآن</button>
+                </form>
+
+                <div class="table-wrap" style="margin-top: 16px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Manifest</th>
+                                <th>النوع</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>Schema</th>
+                                <th>حجم SQLite</th>
+                                <th>حجم ips.txt</th>
+                                <th>استعادة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($backupManifests)): ?>
+                                <tr>
+                                    <td colspan="7"><div class="empty-state">لا توجد نسخ احتياطية بعد.</div></td>
+                                </tr>
+                            <?php endif; ?>
+
+                            <?php foreach ($backupManifests as $backupRow): ?>
+                                <tr>
+                                    <td class="ip"><?= e($backupRow['manifest'] ?? '') ?></td>
+                                    <td><?= e($backupRow['type'] ?? 'manual') ?></td>
+                                    <td class="ip"><?= e($backupRow['created_at'] ?? '') ?></td>
+                                    <td><?= number_format((int) ($backupRow['schema_version'] ?? 0)) ?></td>
+                                    <td><?= number_format((int) ($backupRow['database_size'] ?? 0)) ?> bytes</td>
+                                    <td><?= number_format((int) ($backupRow['feed_size'] ?? 0)) ?> bytes</td>
+                                    <td>
+                                        <form method="post" class="inline-form" onsubmit="return confirm('سيتم استبدال قاعدة SQLite و ips.txt بالنسخة المحددة. هل تريد المتابعة؟');">
+                                            <?= csrfField() ?>
+                                            <input type="hidden" name="backup_action" value="restore">
+                                            <input type="hidden" name="backup_manifest" value="<?= e($backupRow['manifest'] ?? '') ?>">
+                                            <button class="btn btn-danger" type="submit"><?= iconSvg('warning') ?> استعادة</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="note">قبل أي استعادة، ينشئ النظام نسخة <strong>pre_restore</strong> تلقائياً حتى يمكن الرجوع لحالة ما قبل الاستعادة.</p>
             </div>
         </section>
         <?php endif; ?>

@@ -61,14 +61,18 @@ $operationsLogsDir = rtrim((string) workerConfigValue($config, 'operations.logs_
 $workerLogFile = (string) workerConfigValue($config, 'operations.worker_log', $operationsLogsDir . '/vt_worker.log');
 $databaseFile = (string) workerConfigValue($config, 'database', $settingsDir . '/ip_feed.sqlite');
 $logFile = (string) workerConfigValue($config, 'files.log', $databaseFile);
-$vtSettingsFile = (string) workerConfigValue($config, 'files.vt_settings', $settingsDir . '/vt_settings.json');
-$vtRateLimitFile = (string) workerConfigValue($config, 'files.vt_rate_limit', $settingsDir . '/vt_rate_limit.json');
+$vtSettingsFile = (string) workerConfigValue($config, 'files.vt_settings', $databaseFile);
+$vtRateLimitFile = (string) workerConfigValue($config, 'files.vt_rate_limit', $databaseFile);
 $vtMinIntervalSeconds = max(1, (int) workerConfigValue($config, 'virustotal.min_interval_seconds', 16));
 $vtDailyQuota = max(1, (int) workerConfigValue($config, 'virustotal.daily_quota', 500));
 $vtMaxServerWaitSeconds = max(0, (int) workerConfigValue($config, 'virustotal.max_server_wait_seconds', 20));
 $legacyUsersFile = (string) workerConfigValue($config, 'legacy_json.users', $settingsDir . '/users.json');
 $legacyLogFile = (string) workerConfigValue($config, 'legacy_json.log', $settingsDir . '/ips_log.json');
 $legacyGeoCacheFile = (string) workerConfigValue($config, 'legacy_json.geo_cache', $settingsDir . '/ip_geo_cache.json');
+$legacyVisitorGeoCacheFile = (string) workerConfigValue($config, 'legacy_json.visitor_geo_cache', $settingsDir . '/visitor_geo_cache.json');
+$legacyVtSettingsFile = (string) workerConfigValue($config, 'legacy_json.vt_settings', $settingsDir . '/vt_settings.json');
+$legacyVtRateLimitFile = (string) workerConfigValue($config, 'legacy_json.vt_rate_limit', $settingsDir . '/vt_rate_limit.json');
+$legacyLoginRateLimitFile = (string) workerConfigValue($config, 'legacy_json.login_rate_limit', $settingsDir . '/login_attempts.json');
 $limit = max(1, min(50, (int) workerCliOption($argv, 'limit', '1')));
 $sleepSeconds = max(0, min(60, (int) workerCliOption($argv, 'sleep', '2')));
 
@@ -80,6 +84,12 @@ migrateLegacyJsonToSqlite($databaseFile, [
     'users' => $legacyUsersFile,
     'log' => $legacyLogFile,
     'geo_cache' => $legacyGeoCacheFile,
+]);
+migrateOperationalJsonToSqlite($databaseFile, [
+    'visitor_geo_cache' => $legacyVisitorGeoCacheFile,
+    'vt_settings' => $legacyVtSettingsFile,
+    'vt_rate_limit' => $legacyVtRateLimitFile,
+    'login_rate_limit' => $legacyLoginRateLimitFile,
 ]);
 backfillVirusTotalResultsFromLogs($databaseFile);
 

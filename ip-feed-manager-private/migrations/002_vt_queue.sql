@@ -39,3 +39,10 @@ CREATE INDEX IF NOT EXISTS idx_vt_results_asn ON vt_results(vt_asn);
 CREATE INDEX IF NOT EXISTS idx_vt_queue_status ON vt_queue(status);
 CREATE INDEX IF NOT EXISTS idx_vt_queue_ip_status ON vt_queue(ip, status);
 CREATE INDEX IF NOT EXISTS idx_vt_queue_created_at ON vt_queue(created_at);
+
+INSERT INTO schema_version (id, version, migration, applied_at)
+VALUES (1, 2, '002_vt_queue.sql', datetime('now'))
+ON CONFLICT(id) DO UPDATE SET
+    version = CASE WHEN excluded.version > schema_version.version THEN excluded.version ELSE schema_version.version END,
+    migration = CASE WHEN excluded.version >= schema_version.version THEN excluded.migration ELSE schema_version.migration END,
+    applied_at = CASE WHEN excluded.version >= schema_version.version THEN excluded.applied_at ELSE schema_version.applied_at END;

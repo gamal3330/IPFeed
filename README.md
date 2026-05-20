@@ -1,17 +1,18 @@
 # IP Feed Manager
 
-IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for FortiGate. It keeps `ips.txt` as the public feed output while storing users, logs, geo cache, VirusTotal results, queue state, and management metadata in SQLite.
+IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for FortiGate. It keeps `ips.txt` as the public FortiGate feed output while storing application data and runtime state in SQLite.
 
 ## Features
 
 - FortiGate-compatible `ips.txt` output.
 - Secure admin login with role-based users.
 - Login attempt rate limiting and login event history.
-- SQLite storage for users, logs, geo cache, VirusTotal results, queue state, IP metadata, and login events.
+- SQLite storage for users, logs, geo cache, VirusTotal settings/rate limits, queue state, IP metadata, login events, app state, and schema version.
 - VirusTotal queue with gradual background processing.
 - systemd/cron templates for stable VirusTotal worker operation.
 - JSONL operational logs for web/runtime, VirusTotal worker, and backups.
 - Automated SQLite and `ips.txt` backups with retention cleanup.
+- Backup and restore from CLI, plus admin UI backup/restore controls.
 - Public monitoring health check endpoint with optional token protection.
 - Last-result caching to avoid repeated VirusTotal checks.
 - Bulk IP management: scan, delete, export CSV/TXT, update category, and set expiration dates.
@@ -56,9 +57,6 @@ IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for Fo
 - Writable access for the web server user to:
   - `ipfeed/ips.txt`
   - `ip-feed-manager-private/ip_feed.sqlite`
-  - `ip-feed-manager-private/vt_rate_limit.json`
-  - `ip-feed-manager-private/vt_settings.json`
-  - `ip-feed-manager-private/login_attempts.json`
   - `ip-feed-manager-private/logs/`
   - `ip-feed-manager-private/backups/`
 
@@ -79,6 +77,14 @@ If Composer is not available yet, the application keeps a small fallback autoloa
 
 ```bash
 python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite
+```
+
+The canonical migrations are:
+
+```text
+ip-feed-manager-private/migrations/001_initial.sql
+ip-feed-manager-private/migrations/002_vt_queue.sql
+ip-feed-manager-private/migrations/003_ip_metadata.sql
 ```
 
 6. Make sure `pdo_sqlite` is enabled.
@@ -121,6 +127,14 @@ Create a backup manually:
 python3 ip-feed-manager-private/backup.py --retention-days=14
 ```
 
+Restore from a manifest:
+
+```bash
+python3 ip-feed-manager-private/backup.py restore --manifest backup_YYYYMMDD_HHMMSS.json
+```
+
+The admin Settings page also includes backup and restore controls. Restore creates a `pre_restore` backup first.
+
 Or enable the daily systemd timer:
 
 ```bash
@@ -140,7 +154,7 @@ After logging in, open:
 ipfeed/index.php?page=health
 ```
 
-This page checks file permissions, private directory placement, `.htaccess` protection, SQLite integrity, and VirusTotal queue state.
+This page checks file permissions, private directory placement, `.htaccess` protection, SQLite integrity, schema version, app state, and VirusTotal queue state.
 
 For external monitoring, use:
 

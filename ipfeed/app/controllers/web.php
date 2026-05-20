@@ -52,13 +52,17 @@ $ipsFile = (string) appConfigValue($appConfig, 'files.feed', $webRoot . '/ips.tx
 $usersFile = (string) appConfigValue($appConfig, 'files.users', $databaseFile);
 $logFile = (string) appConfigValue($appConfig, 'files.log', $databaseFile);
 $geoCacheFile = (string) appConfigValue($appConfig, 'files.geo_cache', $databaseFile);
-$visitorGeoCacheFile = (string) appConfigValue($appConfig, 'files.visitor_geo_cache', $appSettingsDir . '/visitor_geo_cache.json');
-$vtSettingsFile = (string) appConfigValue($appConfig, 'files.vt_settings', $appSettingsDir . '/vt_settings.json');
-$vtRateLimitFile = (string) appConfigValue($appConfig, 'files.vt_rate_limit', $appSettingsDir . '/vt_rate_limit.json');
-$loginRateLimitFile = (string) appConfigValue($appConfig, 'files.login_rate_limit', $appSettingsDir . '/login_attempts.json');
+$visitorGeoCacheFile = (string) appConfigValue($appConfig, 'files.visitor_geo_cache', $databaseFile);
+$vtSettingsFile = (string) appConfigValue($appConfig, 'files.vt_settings', $databaseFile);
+$vtRateLimitFile = (string) appConfigValue($appConfig, 'files.vt_rate_limit', $databaseFile);
+$loginRateLimitFile = (string) appConfigValue($appConfig, 'files.login_rate_limit', $databaseFile);
 $legacyUsersFile = (string) appConfigValue($appConfig, 'legacy_json.users', $appSettingsDir . '/users.json');
 $legacyLogFile = (string) appConfigValue($appConfig, 'legacy_json.log', $appSettingsDir . '/ips_log.json');
 $legacyGeoCacheFile = (string) appConfigValue($appConfig, 'legacy_json.geo_cache', $appSettingsDir . '/ip_geo_cache.json');
+$legacyVisitorGeoCacheFile = (string) appConfigValue($appConfig, 'legacy_json.visitor_geo_cache', $appSettingsDir . '/visitor_geo_cache.json');
+$legacyVtSettingsFile = (string) appConfigValue($appConfig, 'legacy_json.vt_settings', $appSettingsDir . '/vt_settings.json');
+$legacyVtRateLimitFile = (string) appConfigValue($appConfig, 'legacy_json.vt_rate_limit', $appSettingsDir . '/vt_rate_limit.json');
+$legacyLoginRateLimitFile = (string) appConfigValue($appConfig, 'legacy_json.login_rate_limit', $appSettingsDir . '/login_attempts.json');
 
 $maxLogRowsOnScreen = max(50, (int) appConfigValue($appConfig, 'ui.max_log_rows_on_screen', 300));
 $rowsPerPage = max(5, (int) appConfigValue($appConfig, 'ui.rows_per_page', 10));
@@ -102,12 +106,28 @@ $loginRateLimitLockSeconds = max(60, (int) appConfigValue($appConfig, 'security.
 $operationsLogsDir = rtrim((string) appConfigValue($appConfig, 'operations.logs_dir', $appSettingsDir . '/logs'), '/\\');
 $appLogFile = (string) appConfigValue($appConfig, 'operations.app_log', $operationsLogsDir . '/app.log');
 $backupDir = rtrim((string) appConfigValue($appConfig, 'backup.dir', $appSettingsDir . '/backups'), '/\\');
+$backupRetentionDays = max(0, (int) appConfigValue($appConfig, 'backup.retention_days', 14));
 $backupMaxAgeHours = max(1, (int) appConfigValue($appConfig, 'backup.max_age_hours', 30));
 $healthCheckEnabled = (bool) appConfigValue($appConfig, 'healthcheck.enabled', true);
 $healthCheckToken = trim((string) (getenv('IP_FEED_HEALTH_TOKEN') ?: ($_SERVER['IP_FEED_HEALTH_TOKEN'] ?? appConfigValue($appConfig, 'healthcheck.token', ''))));
 $healthCheckFailOnWarning = (bool) appConfigValue($appConfig, 'healthcheck.fail_on_warning', false);
 
 \IpFeed\Services\AppLogger::configurePhpErrorLog($appLogFile);
+
+ensurePrivateSettingsDir($appSettingsDir);
+ensureSqliteDatabase($databaseFile);
+migrateLegacyJsonToSqlite($databaseFile, [
+    'users' => $legacyUsersFile,
+    'log' => $legacyLogFile,
+    'geo_cache' => $legacyGeoCacheFile,
+]);
+migrateOperationalJsonToSqlite($databaseFile, [
+    'visitor_geo_cache' => $legacyVisitorGeoCacheFile,
+    'vt_settings' => $legacyVtSettingsFile,
+    'vt_rate_limit' => $legacyVtRateLimitFile,
+    'login_rate_limit' => $legacyLoginRateLimitFile,
+]);
+backfillVirusTotalResultsFromLogs($databaseFile);
 
 $vtConfig = resolveVirusTotalConfig($vtSettingsFile, $vtEnvApiKey);
 $vtApiKey = (string) ($vtConfig['api_key'] ?? '');
@@ -138,15 +158,6 @@ session_set_cookie_params([
 ]);
 session_start();
 
-ensurePrivateSettingsDir($appSettingsDir);
-ensureSqliteDatabase($databaseFile);
-migrateLegacyJsonToSqlite($databaseFile, [
-    'users' => $legacyUsersFile,
-    'log' => $legacyLogFile,
-    'geo_cache' => $legacyGeoCacheFile,
-]);
-backfillVirusTotalResultsFromLogs($databaseFile);
-
 $visitorAccess = [
     'allowed' => true,
     'ip' => getRequestClientIp(),
@@ -170,7 +181,8 @@ if ($countryRestrictionEnabled) {
     }
 }
 
-$message = '';
+$message = (string) ($_SESSION['flash_message'] ?? '');
+unset($_SESSION['flash_message']);
 $error = '';
 $requestMethod = (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET');
 ensureCsrfToken();
@@ -621,6 +633,30 @@ if ($requestMethod === 'POST') {
                 $error = 'إجراء إعدادات VirusTotal غير معروف.';
             }
         }
+    } elseif (isset($_POST['backup_action']) && isLoggedIn()) {
+        if (!canManageUsers($users)) {
+            $error = 'حسابك لا يملك صلاحية إدارة النسخ الاحتياطي.';
+        } else {
+            $backupAction = (string) ($_POST['backup_action'] ?? '');
+
+            try {
+                if ($backupAction === 'create') {
+                    $backupResult = createOperationalBackup($databaseFile, $ipsFile, $backupDir, $backupRetentionDays);
+                    auditUserManagement($logFile, 'backup_create', (string) ($backupResult['manifest'] ?? ''), (string) $_SESSION['user']);
+                    $message = 'تم إنشاء نسخة احتياطية: ' . (string) ($backupResult['manifest'] ?? '');
+                } elseif ($backupAction === 'restore') {
+                    $manifestName = trim((string) ($_POST['backup_manifest'] ?? ''));
+                    $restoreResult = restoreOperationalBackup($databaseFile, $ipsFile, $backupDir, $manifestName);
+                    $_SESSION['flash_message'] = 'تمت الاستعادة من النسخة: ' . (string) ($restoreResult['manifest'] ?? $manifestName) . '. تم إنشاء نسخة قبل الاستعادة: ' . (string) ($restoreResult['pre_restore_manifest'] ?? '-');
+                    header('Location: index.php?page=settings');
+                    exit;
+                } else {
+                    $error = 'إجراء النسخ الاحتياطي غير معروف.';
+                }
+            } catch (Throwable $exception) {
+                $error = 'تعذر تنفيذ إجراء النسخ الاحتياطي: ' . $exception->getMessage();
+            }
+        }
     } elseif (isset($_POST['add_ips']) && isLoggedIn()) {
         $storageIssue = storageError($ipsFile, $logFile);
 
@@ -905,6 +941,8 @@ $recentLoginEvents = recentLoginEvents($databaseFile, 30);
 $activeUsersCount = countActiveUsers($users);
 $currentRoleLabel = roleLabel(currentUserRole($users));
 $currentPage = allowedAppPage((string) ($_GET['page'] ?? 'dashboard'));
+$schemaVersion = sqliteSchemaVersion($databaseFile);
+$backupManifests = listOperationalBackups($backupDir, 10);
 
 $sqliteIntegrityStatus = 'error';
 $sqliteIntegrityMessage = 'تعذر فحص SQLite.';
@@ -967,6 +1005,18 @@ $systemHealthChecks = [
         'name' => 'سلامة قاعدة البيانات',
         'status' => $sqliteIntegrityStatus,
         'detail' => $sqliteIntegrityMessage,
+    ],
+    [
+        'group' => 'SQLite',
+        'name' => 'Schema version',
+        'status' => (int) ($schemaVersion['version'] ?? 0) >= 3 ? 'ok' : 'warning',
+        'detail' => 'version=' . (int) ($schemaVersion['version'] ?? 0) . ' · ' . (string) ($schemaVersion['migration'] ?? ''),
+    ],
+    [
+        'group' => 'SQLite',
+        'name' => 'حالة التطبيق الموحدة',
+        'status' => sqliteCountRows($databaseFile, 'app_state') >= 0 ? 'ok' : 'warning',
+        'detail' => 'app_state rows: ' . number_format(sqliteCountRows($databaseFile, 'app_state')),
     ],
     [
         'group' => 'التشغيل',
