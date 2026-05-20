@@ -66,6 +66,7 @@ $vtRateLimitFile = (string) workerConfigValue($config, 'files.vt_rate_limit', $d
 $vtMinIntervalSeconds = max(1, (int) workerConfigValue($config, 'virustotal.min_interval_seconds', 16));
 $vtDailyQuota = max(1, (int) workerConfigValue($config, 'virustotal.daily_quota', 500));
 $vtMaxServerWaitSeconds = max(0, (int) workerConfigValue($config, 'virustotal.max_server_wait_seconds', 20));
+configureVirusTotalQuotaStorage($vtRateLimitFile, $vtDailyQuota, $vtMinIntervalSeconds, $vtMaxServerWaitSeconds);
 $legacyUsersFile = (string) workerConfigValue($config, 'legacy_json.users', $settingsDir . '/users.json');
 $legacyLogFile = (string) workerConfigValue($config, 'legacy_json.log', $settingsDir . '/ips_log.json');
 $legacyGeoCacheFile = (string) workerConfigValue($config, 'legacy_json.geo_cache', $settingsDir . '/ip_geo_cache.json');

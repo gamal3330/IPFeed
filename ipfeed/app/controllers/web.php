@@ -85,6 +85,7 @@ $vtMinIntervalSeconds = max(1, (int) appConfigValue($appConfig, 'virustotal.min_
 $vtDailyQuota = max(1, (int) appConfigValue($appConfig, 'virustotal.daily_quota', 500));
 $vtMaxServerWaitSeconds = max(0, (int) appConfigValue($appConfig, 'virustotal.max_server_wait_seconds', 20));
 $vtResultFreshTtlSeconds = max(0, (int) appConfigValue($appConfig, 'virustotal.result_fresh_ttl_seconds', 86400));
+configureVirusTotalQuotaStorage($vtRateLimitFile, $vtDailyQuota, $vtMinIntervalSeconds, $vtMaxServerWaitSeconds);
 
 $countryRestrictionEnabled = (bool) appConfigValue($appConfig, 'visitor_country_restriction.enabled', false);
 $allowedVisitorCountryCodes = appConfigValue($appConfig, 'visitor_country_restriction.allowed_countries', [

@@ -182,15 +182,37 @@ function auditVirusTotalSettings(string $logFile, string $action, string $actorU
     ]);
 }
 
+function configureVirusTotalQuotaStorage(string $rateLimitFile, int $dailyQuota, int $minIntervalSeconds, int $maxServerWaitSeconds): void
+{
+    $GLOBALS['vtRateLimitFile'] = $rateLimitFile;
+    $GLOBALS['vtDailyQuota'] = max(1, $dailyQuota);
+    $GLOBALS['vtMinIntervalSeconds'] = max(1, $minIntervalSeconds);
+    $GLOBALS['vtMaxServerWaitSeconds'] = max(0, $maxServerWaitSeconds);
+}
+
+function virusTotalQuotaRuntimeConfig(): array
+{
+    return [
+        'rate_limit_file' => (string) ($GLOBALS['vtRateLimitFile'] ?? ''),
+        'daily_quota' => max(1, (int) ($GLOBALS['vtDailyQuota'] ?? 500)),
+        'min_interval_seconds' => max(1, (int) ($GLOBALS['vtMinIntervalSeconds'] ?? 16)),
+        'max_server_wait_seconds' => max(0, (int) ($GLOBALS['vtMaxServerWaitSeconds'] ?? 20)),
+    ];
+}
+
 function acquireVirusTotalQuotaSlot(): array
 {
-    global $vtRateLimitFile, $vtDailyQuota, $vtMinIntervalSeconds, $vtMaxServerWaitSeconds;
+    $quotaConfig = virusTotalQuotaRuntimeConfig();
+    $vtRateLimitFile = $quotaConfig['rate_limit_file'];
+    $vtDailyQuota = $quotaConfig['daily_quota'];
+    $vtMinIntervalSeconds = $quotaConfig['min_interval_seconds'];
+    $vtMaxServerWaitSeconds = $quotaConfig['max_server_wait_seconds'];
 
     $now = time();
     $todayUtc = gmdate('Y-m-d', $now);
     $tomorrowUtc = strtotime($todayUtc . ' 00:00:00 UTC +1 day');
 
-    if (isSqliteStorage($vtRateLimitFile)) {
+    if ($vtRateLimitFile !== '' && isSqliteStorage($vtRateLimitFile)) {
         try {
             $result = sqliteUpdateJsonState($vtRateLimitFile, 'virustotal', 'rate_limit', function (array &$state, bool $persistent) use ($now, $todayUtc, $tomorrowUtc, $vtDailyQuota, $vtMinIntervalSeconds, $vtMaxServerWaitSeconds): array {
                 if (!is_array($state) || (($state['day_utc'] ?? '') !== $todayUtc)) {
@@ -254,7 +276,7 @@ function acquireVirusTotalQuotaSlot(): array
         }
     }
 
-    if (!is_dir(dirname($vtRateLimitFile))) {
+    if ($vtRateLimitFile === '' || !is_dir(dirname($vtRateLimitFile))) {
         return [
             'allowed' => false,
             'wait_seconds' => 0,
@@ -350,19 +372,22 @@ function acquireVirusTotalQuotaSlot(): array
 
 function virusTotalQuotaSnapshot(): array
 {
-    global $vtRateLimitFile, $vtDailyQuota, $vtMinIntervalSeconds;
+    $quotaConfig = virusTotalQuotaRuntimeConfig();
+    $vtRateLimitFile = $quotaConfig['rate_limit_file'];
+    $vtDailyQuota = $quotaConfig['daily_quota'];
+    $vtMinIntervalSeconds = $quotaConfig['min_interval_seconds'];
 
     $now = time();
     $todayUtc = gmdate('Y-m-d', $now);
     $state = [];
 
-    if (isSqliteStorage($vtRateLimitFile)) {
+    if ($vtRateLimitFile !== '' && isSqliteStorage($vtRateLimitFile)) {
         try {
             $state = sqliteReadJsonState($vtRateLimitFile, 'virustotal', 'rate_limit', []);
         } catch (Throwable) {
             $state = [];
         }
-    } elseif (file_exists($vtRateLimitFile)) {
+    } elseif ($vtRateLimitFile !== '' && file_exists($vtRateLimitFile)) {
         $raw = file_get_contents($vtRateLimitFile);
         $decoded = is_string($raw) && trim($raw) !== '' ? json_decode($raw, true) : [];
         $state = is_array($decoded) ? $decoded : [];
