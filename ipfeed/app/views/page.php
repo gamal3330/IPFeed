@@ -14,7 +14,7 @@ if (!defined('IP_FEED_APP')) {
     <title>IP Feed Manager</title>
     <style>
         :root {
-            --bg: #0f172a;
+            --bg: #eef2f7;
             --surface: #ffffff;
             --surface-soft: #f8fafc;
             --surface-muted: #eef2f7;
@@ -30,8 +30,8 @@ if (!defined('IP_FEED_APP')) {
             --danger-soft: #fee2e2;
             --warning: #d97706;
             --warning-soft: #fef3c7;
-            --shadow: 0 24px 70px rgba(15, 23, 42, 0.16);
-            --radius: 22px;
+            --shadow: 0 14px 34px rgba(15, 23, 42, 0.10);
+            --radius: 8px;
         }
 
         * {
@@ -43,10 +43,7 @@ if (!defined('IP_FEED_APP')) {
             min-height: 100vh;
             color: var(--text);
             font-family: "Segoe UI", Tahoma, Arial, sans-serif;
-            background:
-                radial-gradient(circle at top right, rgba(37, 99, 235, 0.28), transparent 30%),
-                radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.18), transparent 35%),
-                linear-gradient(135deg, #0f172a 0%, #111827 45%, #1e293b 100%);
+            background: var(--bg);
         }
 
         a {
@@ -70,7 +67,7 @@ if (!defined('IP_FEED_APP')) {
             width: min(460px, 100%);
             background: rgba(255, 255, 255, 0.96);
             border: 1px solid rgba(255, 255, 255, 0.35);
-            border-radius: 30px;
+            border-radius: 8px;
             padding: 34px;
             box-shadow: var(--shadow);
             backdrop-filter: blur(18px);
@@ -86,7 +83,7 @@ if (!defined('IP_FEED_APP')) {
         .brand-mark {
             width: 54px;
             height: 54px;
-            border-radius: 18px;
+            border-radius: 10px;
             display: grid;
             place-items: center;
             color: #ffffff;
@@ -107,7 +104,7 @@ if (!defined('IP_FEED_APP')) {
             margin-bottom: 4px;
             font-size: 24px;
             font-weight: 900;
-            letter-spacing: -0.03em;
+            letter-spacing: 0;
         }
 
         .brand-subtitle,
@@ -139,7 +136,7 @@ if (!defined('IP_FEED_APP')) {
         select {
             width: 100%;
             border: 1px solid var(--line);
-            border-radius: 16px;
+            border-radius: 8px;
             padding: 13px 15px;
             color: var(--text);
             background: #ffffff;
@@ -170,7 +167,7 @@ if (!defined('IP_FEED_APP')) {
             justify-content: center;
             gap: 8px;
             border: 0;
-            border-radius: 14px;
+            border-radius: 8px;
             padding: 12px 18px;
             min-height: 44px;
             color: #ffffff;
@@ -214,7 +211,7 @@ if (!defined('IP_FEED_APP')) {
             box-shadow: none;
             padding: 9px 14px;
             min-height: 38px;
-            border-radius: 12px;
+            border-radius: 8px;
         }
 
         .btn-danger:hover {
@@ -224,7 +221,7 @@ if (!defined('IP_FEED_APP')) {
         .btn-small {
             min-height: 36px;
             padding: 8px 12px;
-            border-radius: 11px;
+            border-radius: 8px;
             font-size: 12px;
         }
 
@@ -242,108 +239,134 @@ if (!defined('IP_FEED_APP')) {
             width: 100%;
         }
 
+        .btn .icon,
+        .nav-link .icon,
+        .alert .icon,
+        .user-pill .icon,
+        .filter-summary-title .icon {
+            margin-top: 1px;
+        }
+
         .app-shell {
-            padding: 28px 0 48px;
+            padding: 18px 0 44px;
         }
 
-        .hero {
-            position: relative;
-            overflow: hidden;
-            color: #ffffff;
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.98), rgba(14, 165, 233, 0.88));
-            border: 1px solid rgba(255, 255, 255, 0.24);
-            border-radius: 32px;
-            padding: 28px;
-            box-shadow: var(--shadow);
+        .app-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            padding: 12px;
+            border: 1px solid rgba(226, 232, 240, 0.92);
+            border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(18px);
         }
 
-        .hero::after {
-            content: "";
-            position: absolute;
-            inset-inline-start: -80px;
-            top: -110px;
-            width: 280px;
-            height: 280px;
-            background: rgba(255, 255, 255, 0.18);
-            border-radius: 999px;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 1;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 22px;
-        }
-
-        .hero h1 {
-            margin-bottom: 8px;
-            font-size: clamp(28px, 4vw, 42px);
-            letter-spacing: -0.04em;
-        }
-
-        .hero p {
-            margin-bottom: 0;
-            color: rgba(255, 255, 255, 0.86);
-        }
-
-        .hero-actions {
+        .topbar-main,
+        .topbar-actions,
+        .brand-lockup {
             display: flex;
             align-items: center;
             gap: 10px;
-            flex-wrap: wrap;
+        }
+
+        .topbar-main {
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .brand-lockup {
+            min-width: 240px;
+        }
+
+        .app-mark {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            color: #ffffff;
+            background: #1e293b;
+            font-size: 13px;
+            font-weight: 950;
+        }
+
+        .page-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 950;
+            letter-spacing: 0;
+        }
+
+        .page-subtitle {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
         }
 
         .app-nav {
             display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin: 14px 0 0;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            overflow-x: auto;
+            scrollbar-width: thin;
         }
 
-        .app-nav a {
+        .nav-link {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
+            gap: 8px;
             min-height: 36px;
-            padding: 8px 12px;
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            border-radius: 12px;
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.12);
+            padding: 8px 11px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: #334155;
+            background: transparent;
             font-size: 13px;
             font-weight: 900;
             text-decoration: none;
+            white-space: nowrap;
         }
 
-        .app-nav a.active {
-            color: #1e293b;
+        .nav-link:hover {
+            background: #f1f5f9;
+        }
+
+        .nav-link.active {
+            color: #1d4ed8;
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .topbar-actions .btn-secondary {
             background: #ffffff;
-        }
-
-        .hero-actions .btn-secondary {
-            border-color: rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.16);
-            color: #ffffff;
-            backdrop-filter: blur(12px);
-        }
-
-        .hero-actions .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.22);
         }
 
         .user-pill {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            margin-top: 16px;
-            padding: 9px 13px;
-            background: rgba(255, 255, 255, 0.16);
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            border-radius: 999px;
-            color: rgba(255, 255, 255, 0.94);
-            font-size: 13px;
+            padding: 8px 10px;
+            background: #f8fafc;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: #334155;
+            font-size: 12px;
             font-weight: 800;
+        }
+
+        .icon {
+            width: 17px;
+            height: 17px;
+            flex: 0 0 auto;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
         .grid {
@@ -358,7 +381,7 @@ if (!defined('IP_FEED_APP')) {
             border: 1px solid rgba(226, 232, 240, 0.9);
             border-radius: var(--radius);
             padding: 22px;
-            box-shadow: 0 16px 44px rgba(15, 23, 42, 0.10);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
         }
 
         .span-12 { grid-column: span 12; }
@@ -379,7 +402,7 @@ if (!defined('IP_FEED_APP')) {
             margin-bottom: 6px;
             color: #0f172a;
             font-size: 20px;
-            letter-spacing: -0.02em;
+            letter-spacing: 0;
         }
 
         .card-head p {
@@ -421,7 +444,7 @@ if (!defined('IP_FEED_APP')) {
             color: #0f172a;
             font-size: 34px;
             font-weight: 950;
-            letter-spacing: -0.04em;
+            letter-spacing: 0;
         }
 
         .stat-helper {
@@ -432,13 +455,38 @@ if (!defined('IP_FEED_APP')) {
             font-size: 12px;
         }
 
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .stats .stat-panel {
+            min-height: 108px;
+            padding: 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .stats .stat-panel::after {
+            display: none;
+        }
+
+        .stat-help {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
         .alert {
             display: flex;
             align-items: flex-start;
             gap: 12px;
             padding: 14px 16px;
             margin-top: 18px;
-            border-radius: 16px;
+            border-radius: 8px;
             line-height: 1.7;
             font-weight: 800;
         }
@@ -473,7 +521,7 @@ if (!defined('IP_FEED_APP')) {
             padding: 12px 14px;
             margin-bottom: 14px;
             border: 1px solid var(--line);
-            border-radius: 16px;
+            border-radius: 8px;
             background: #f8fafc;
         }
 
@@ -549,7 +597,7 @@ if (!defined('IP_FEED_APP')) {
         .table-wrap {
             overflow-x: auto;
             border: 1px solid var(--line);
-            border-radius: 18px;
+            border-radius: 8px;
             background: #ffffff;
         }
 
@@ -712,10 +760,45 @@ if (!defined('IP_FEED_APP')) {
             gap: 12px;
             align-items: end;
             padding: 14px;
-            margin-bottom: 14px;
             border: 1px solid var(--line);
-            border-radius: 16px;
+            border-radius: 8px;
             background: #f8fafc;
+        }
+
+        .filters-drawer {
+            margin-bottom: 14px;
+        }
+
+        .filters-drawer summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #ffffff;
+            cursor: pointer;
+            font-weight: 950;
+            list-style: none;
+        }
+
+        .filters-drawer summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .filter-summary-title,
+        .filter-summary-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-summary-meta {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 900;
         }
 
         .filter-panel .form-group {
@@ -733,7 +816,7 @@ if (!defined('IP_FEED_APP')) {
             padding: 13px 14px;
             margin-bottom: 16px;
             border: 1px solid var(--line);
-            border-radius: 16px;
+            border-radius: 8px;
             background: #f8fafc;
         }
 
@@ -761,6 +844,10 @@ if (!defined('IP_FEED_APP')) {
             gap: 12px;
             flex-wrap: wrap;
             margin-top: 14px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #ffffff;
         }
 
         .pagination-info {
@@ -774,6 +861,9 @@ if (!defined('IP_FEED_APP')) {
             align-items: center;
             gap: 6px;
             flex-wrap: wrap;
+            max-width: 100%;
+            overflow-x: auto;
+            padding-bottom: 2px;
         }
 
         .page-link {
@@ -784,7 +874,7 @@ if (!defined('IP_FEED_APP')) {
             height: 38px;
             padding: 0 10px;
             border: 1px solid var(--line);
-            border-radius: 12px;
+            border-radius: 8px;
             color: #334155;
             background: #ffffff;
             text-decoration: none;
@@ -827,7 +917,7 @@ if (!defined('IP_FEED_APP')) {
         .user-table select {
             min-width: 150px;
             padding: 10px 12px;
-            border-radius: 12px;
+            border-radius: 8px;
             font-size: 13px;
         }
 
@@ -855,7 +945,7 @@ if (!defined('IP_FEED_APP')) {
             gap: 12px;
             padding: 12px 14px;
             border: 1px solid var(--line);
-            border-radius: 15px;
+            border-radius: 8px;
             background: #ffffff;
         }
 
@@ -873,7 +963,7 @@ if (!defined('IP_FEED_APP')) {
             margin-top: 16px;
             border: 1px solid var(--line);
             background: rgba(15, 23, 42, 0.03);
-            border-radius: 16px;
+            border-radius: 8px;
             padding: 14px;
         }
 
@@ -989,7 +1079,7 @@ if (!defined('IP_FEED_APP')) {
             padding: 14px;
             background: #f8fafc;
             border: 1px solid var(--line);
-            border-radius: 16px;
+            border-radius: 8px;
         }
 
         .user-table input,
@@ -997,7 +1087,7 @@ if (!defined('IP_FEED_APP')) {
             min-width: 150px;
             margin: 0;
             padding: 10px 12px;
-            border-radius: 12px;
+            border-radius: 8px;
             font-size: 13px;
         }
 
@@ -1046,7 +1136,7 @@ if (!defined('IP_FEED_APP')) {
         .queue-metric {
             padding: 14px;
             border: 1px solid var(--line);
-            border-radius: 14px;
+            border-radius: 8px;
             background: #f8fafc;
         }
 
@@ -1072,7 +1162,7 @@ if (!defined('IP_FEED_APP')) {
         .health-item {
             padding: 14px;
             border: 1px solid var(--line);
-            border-radius: 16px;
+            border-radius: 8px;
             background: #ffffff;
         }
 
@@ -1111,7 +1201,7 @@ if (!defined('IP_FEED_APP')) {
                 grid-column: span 12;
             }
 
-            .hero-content {
+            .topbar-main {
                 align-items: flex-start;
                 flex-direction: column;
             }
@@ -1121,7 +1211,8 @@ if (!defined('IP_FEED_APP')) {
             }
 
             .filter-panel,
-            .metadata-grid {
+            .metadata-grid,
+            .stats {
                 grid-template-columns: 1fr 1fr;
             }
 
@@ -1137,13 +1228,12 @@ if (!defined('IP_FEED_APP')) {
             }
 
             .login-card,
-            .hero,
             .card {
-                border-radius: 22px;
+                border-radius: 8px;
                 padding: 18px;
             }
 
-            .hero-actions,
+            .topbar-actions,
             .copy-row,
             .toolbar,
             .toolbar-controls,
@@ -1155,7 +1245,7 @@ if (!defined('IP_FEED_APP')) {
                 flex-direction: column;
             }
 
-            .hero-actions .btn,
+            .topbar-actions .btn,
             .copy-row .btn,
             .mini-actions .btn,
             .bulk-actions .btn,
@@ -1171,6 +1261,19 @@ if (!defined('IP_FEED_APP')) {
                 flex-direction: column;
             }
 
+            .app-topbar {
+                padding: 10px;
+            }
+
+            .brand-lockup,
+            .topbar-actions {
+                width: 100%;
+            }
+
+            .app-nav {
+                padding-bottom: 2px;
+            }
+
             .grid {
                 gap: 12px;
             }
@@ -1184,7 +1287,8 @@ if (!defined('IP_FEED_APP')) {
             }
 
             .filter-panel,
-            .metadata-grid {
+            .metadata-grid,
+            .stats {
                 grid-template-columns: 1fr;
             }
 
@@ -1214,7 +1318,7 @@ if (!defined('IP_FEED_APP')) {
             tbody tr {
                 display: block;
                 border: 1px solid var(--line);
-                border-radius: 16px;
+                border-radius: 8px;
                 background: #ffffff;
                 overflow: hidden;
             }
@@ -1250,6 +1354,24 @@ if (!defined('IP_FEED_APP')) {
             td[colspan]::before {
                 content: '';
             }
+
+            .pagination {
+                align-items: stretch;
+                background: rgba(255, 255, 255, 0.96);
+            }
+
+            .pagination-info {
+                width: 100%;
+            }
+
+            .pagination-links {
+                flex-wrap: nowrap;
+            }
+
+            .page-link {
+                min-width: 42px;
+                flex: 0 0 auto;
+            }
         }
     </style>
 </head>
@@ -1266,7 +1388,7 @@ if (!defined('IP_FEED_APP')) {
             </div>
 
             <?php if ($error !== ''): ?>
-                <div class="alert alert-error">⚠️ <span><?= e($error) ?></span></div>
+                <div class="alert alert-error"><?= iconSvg('warning') ?> <span><?= e($error) ?></span></div>
             <?php endif; ?>
 
             <form method="post" autocomplete="off">
@@ -1281,7 +1403,7 @@ if (!defined('IP_FEED_APP')) {
                     <input id="password" type="password" name="password" placeholder="••••••••••••" required>
                 </div>
 
-                <button class="btn btn-block" type="submit" name="login">دخول</button>
+                <button class="btn btn-block" type="submit" name="login"><?= iconSvg('login') ?> دخول</button>
             </form>
 
             <p class="note"></p>
@@ -1299,11 +1421,11 @@ if (!defined('IP_FEED_APP')) {
             </div>
 
             <?php if ($message !== ''): ?>
-                <div class="alert alert-success">✅ <span><?= e($message) ?></span></div>
+                <div class="alert alert-success"><?= iconSvg('check') ?> <span><?= e($message) ?></span></div>
             <?php endif; ?>
 
             <?php if ($error !== ''): ?>
-                <div class="alert alert-error">⚠️ <span><?= e($error) ?></span></div>
+                <div class="alert alert-error"><?= iconSvg('warning') ?> <span><?= e($error) ?></span></div>
             <?php endif; ?>
 
             <form method="post" autocomplete="off">
@@ -1321,8 +1443,8 @@ if (!defined('IP_FEED_APP')) {
                 </div>
 
                 <div class="mini-actions">
-                    <button class="btn" type="submit">حفظ كلمة المرور</button>
-                    <a class="btn btn-secondary" href="?logout=1">تسجيل خروج</a>
+                    <button class="btn" type="submit"><?= iconSvg('save') ?> حفظ كلمة المرور</button>
+                    <a class="btn btn-secondary" href="?logout=1"><?= iconSvg('logout') ?> تسجيل خروج</a>
                 </div>
             </form>
 
@@ -1330,36 +1452,62 @@ if (!defined('IP_FEED_APP')) {
         </section>
     </main>
 <?php else: ?>
+    <?php
+        $currentPageTitle = appPageLabel($currentPage);
+        $currentPageSubtitle = match ($currentPage) {
+            'ips' => 'إضافة العناوين، فلترة القائمة، والإجراءات الجماعية.',
+            'logs' => 'سجل العمليات ومحاولات الدخول في صفحة مستقلة.',
+            'users' => 'إدارة الحسابات والصلاحيات.',
+            'settings' => 'إعدادات التكامل والتشغيل.',
+            'health' => 'فحص جاهزية النظام للمراقبة والتشغيل.',
+            default => 'نظرة تشغيلية سريعة على القائمة والطابور.',
+        };
+        $navItems = [
+            ['page' => 'dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
+            ['page' => 'ips', 'icon' => 'ips', 'label' => 'IPs'],
+            ['page' => 'logs', 'icon' => 'logs', 'label' => 'Logs'],
+        ];
+        if (canManageUsers($users)) {
+            $navItems[] = ['page' => 'users', 'icon' => 'users', 'label' => 'Users'];
+            $navItems[] = ['page' => 'settings', 'icon' => 'settings', 'label' => 'Settings'];
+        }
+        $navItems[] = ['page' => 'health', 'icon' => 'health', 'label' => 'Health'];
+    ?>
     <main class="app-shell">
-        <section class="hero">
-            <div class="hero-content">
-                <div>
-                    <h1>لوحة إدارة IP Feed</h1>
-                    <p>إدارة عناوين IP المحظورة، متابعة السجل، وتجهيز الرابط للاستخدام مع FortiGate.</p>
-                    <div class="user-pill">👤 المستخدم الحالي: <?= e($_SESSION['user']) ?> · الصلاحية: <?= e($currentRoleLabel) ?></div>
+        <header class="app-topbar">
+            <div class="topbar-main">
+                <div class="brand-lockup">
+                    <div class="app-mark">IP</div>
+                    <div>
+                        <h1 class="page-title"><?= e($currentPageTitle) ?></h1>
+                        <div class="page-subtitle"><?= e($currentPageSubtitle) ?></div>
+                    </div>
                 </div>
 
-                <div class="hero-actions">
-                    <a class="btn btn-secondary" href="ips.txt" target="_blank" rel="noopener">فتح ips.txt</a>
-                    <a class="btn btn-secondary" href="?logout=1">تسجيل خروج</a>
+                <div class="topbar-actions">
+                    <div class="user-pill"><?= iconSvg('users') ?> <?= e($_SESSION['user']) ?> · <?= e($currentRoleLabel) ?></div>
+                    <a class="btn btn-secondary btn-small" href="ips.txt" target="_blank" rel="noopener"><?= iconSvg('feed') ?> ips.txt</a>
+                    <a class="btn btn-secondary btn-small" href="?logout=1"><?= iconSvg('logout') ?> خروج</a>
                 </div>
             </div>
 
             <nav class="app-nav" aria-label="التنقل الرئيسي">
-                <a class="<?= $currentPage === 'dashboard' ? 'active' : '' ?>" href="?page=dashboard">لوحة التشغيل</a>
-                <?php if (canManageUsers($users)): ?>
-                    <a class="<?= $currentPage === 'settings' ? 'active' : '' ?>" href="?page=settings">الإعدادات</a>
-                <?php endif; ?>
-                <a class="<?= $currentPage === 'health' ? 'active' : '' ?>" href="?page=health">صحة النظام</a>
+                <?php foreach ($navItems as $navItem): ?>
+                    <?php $navPage = (string) $navItem['page']; ?>
+                    <a class="nav-link <?= $currentPage === $navPage ? 'active' : '' ?>" href="?page=<?= e($navPage) ?>">
+                        <?= iconSvg((string) $navItem['icon']) ?>
+                        <span><?= e($navItem['label']) ?></span>
+                    </a>
+                <?php endforeach; ?>
             </nav>
-        </section>
+        </header>
 
         <?php if ($message !== ''): ?>
-            <div class="alert alert-success">✅ <span><?= e($message) ?></span></div>
+            <div class="alert alert-success"><?= iconSvg('check') ?> <span><?= e($message) ?></span></div>
         <?php endif; ?>
 
         <?php if ($error !== ''): ?>
-            <div class="alert alert-error">⚠️ <span><?= e($error) ?></span></div>
+            <div class="alert alert-error"><?= iconSvg('warning') ?> <span><?= e($error) ?></span></div>
         <?php endif; ?>
 
         <?php if ($currentPage === 'dashboard'): ?>
@@ -1424,7 +1572,7 @@ if (!defined('IP_FEED_APP')) {
                     </div>
 
                     <div class="mini-actions">
-                        <button id="vtQueueRunBtn" class="btn btn-secondary" type="button" onclick="processVirusTotalQueueOnce()" <?= $vtApiKey === '' || !canCheckVirusTotal($users) ? 'disabled' : '' ?>>تشغيل دفعة</button>
+                        <button id="vtQueueRunBtn" class="btn btn-secondary" type="button" onclick="processVirusTotalQueueOnce()" <?= $vtApiKey === '' || !canCheckVirusTotal($users) ? 'disabled' : '' ?>><?= iconSvg('scan') ?> تشغيل دفعة</button>
                     </div>
                 </div>
 
@@ -1490,6 +1638,9 @@ if (!defined('IP_FEED_APP')) {
             </div>
         </section>
 
+        <?php endif; ?>
+
+        <?php if ($currentPage === 'ips'): ?>
         <section class="grid">
             <div class="card span-8">
                 <div class="card-head">
@@ -1543,8 +1694,8 @@ if (!defined('IP_FEED_APP')) {
                     </div>
 
                     <div class="mini-actions">
-                        <button id="addIpsSubmit" class="btn" type="submit" name="add_ips">حفظ الإضافات</button>
-                        <button class="btn btn-secondary" type="button" onclick="document.getElementById('ips').value=''; document.getElementById('reason').value=''; document.getElementById('expires_at').value=''; document.getElementById('metadata_note').value='';">مسح الحقول</button>
+                        <button id="addIpsSubmit" class="btn" type="submit" name="add_ips"><?= iconSvg('add') ?> حفظ الإضافات</button>
+                        <button class="btn btn-secondary" type="button" onclick="document.getElementById('ips').value=''; document.getElementById('reason').value=''; document.getElementById('expires_at').value=''; document.getElementById('metadata_note').value='';"><?= iconSvg('clear') ?> مسح الحقول</button>
                     </div>
                 </form>
 
@@ -1561,7 +1712,7 @@ if (!defined('IP_FEED_APP')) {
 
                 <p class="note">سيتم تجاهل القيم غير الصحيحة، حذف التكرارات تلقائياً، ثم تسجيل الدولة والمدينة واسم المزود وإضافة فحص VirusTotal إلى الطابور عند تفعيله.</p>
                 <?php else: ?>
-                    <div class="empty-state" style="border-radius: 16px;">حسابك بصلاحية مشاهدة فقط، لذلك لا يمكنه إضافة IPs أو تعديل القائمة.</div>
+                    <div class="empty-state" style="border-radius: 8px;">حسابك بصلاحية مشاهدة فقط، لذلك لا يمكنه إضافة IPs أو تعديل القائمة.</div>
                 <?php endif; ?>
             </div>
 
@@ -1575,7 +1726,7 @@ if (!defined('IP_FEED_APP')) {
 
                 <div class="copy-row">
                     <input id="feedLink" type="text" value="<?= e((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . dirname($_SERVER['SCRIPT_NAME'] ?? '/') . '/ips.txt') ?>" readonly>
-                    <button class="btn btn-secondary" type="button" onclick="copyFeedLink()">نسخ</button>
+                    <button class="btn btn-secondary" type="button" onclick="copyFeedLink()"><?= iconSvg('feed') ?> نسخ</button>
                 </div>
 
                 <p class="note">تأكد من أن الملف <strong>ips.txt</strong> قابل للقراءة من FortiGate، وأن صلاحيات الكتابة مضبوطة للوحة فقط.</p>
@@ -1587,7 +1738,7 @@ if (!defined('IP_FEED_APP')) {
                 <h3 style="margin-bottom: 12px;">أكثر الدول في قائمة IPs المشبوهة</h3>
                 <div class="country-list">
                     <?php if (empty($topCountries)): ?>
-                        <div class="empty-state" style="border-radius: 15px;">لا توجد بيانات دول كافية للقائمة الحالية حتى الآن.</div>
+                        <div class="empty-state" style="border-radius: 8px;">لا توجد بيانات دول كافية للقائمة الحالية حتى الآن.</div>
                     <?php else: ?>
                         <?php foreach ($topCountries as $country => $count): ?>
                             <div class="country-item">
@@ -1612,95 +1763,104 @@ if (!defined('IP_FEED_APP')) {
                     </div>
                 </div>
 
-                <form class="filter-panel" method="get">
-                    <input type="hidden" name="ip_page" value="1">
-                    <input type="hidden" name="log_page" value="<?= (int) $logPage ?>">
-                    <div class="form-group search-wide">
-                        <label for="ipSearch">بحث IP</label>
-                        <input type="search" id="ipSearch" name="ip_query" value="<?= e($ipSearchQuery) ?>" placeholder="مثال: 8.8 أو 192.168.1.10" autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label for="ipCountry">الدولة</label>
-                        <select id="ipCountry" name="country">
-                            <option value="">كل الدول</option>
-                            <?php foreach ($filterCountries as $country): ?>
-                                <option value="<?= e($country) ?>" <?= ($ipFilters['country'] ?? '') === $country ? 'selected' : '' ?>><?= e($country) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="ipVtStatus">VirusTotal</label>
-                        <select id="ipVtStatus" name="vt_status">
-                            <option value="">كل الحالات</option>
-                            <?php foreach (['خطير', 'مشبوه', 'نظيف', 'مؤجل', 'في الطابور', 'نتيجة حديثة'] as $statusOption): ?>
-                                <option value="<?= e($statusOption) ?>" <?= ($ipFilters['vt_status'] ?? '') === $statusOption ? 'selected' : '' ?>><?= e($statusOption) ?></option>
-                            <?php endforeach; ?>
-                            <option value="__unscanned" <?= ($ipFilters['vt_status'] ?? '') === '__unscanned' ? 'selected' : '' ?>>لم يتم الفحص</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="ipAsn">ASN</label>
-                        <select id="ipAsn" name="asn">
-                            <option value="">كل ASN</option>
-                            <?php foreach ($filterAsns as $asn): ?>
-                                <option value="<?= e($asn) ?>" <?= ($ipFilters['asn'] ?? '') === (string) $asn ? 'selected' : '' ?>>AS<?= e($asn) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="ipUser">المستخدم</label>
-                        <select id="ipUser" name="user">
-                            <option value="">كل المستخدمين</option>
-                            <?php foreach ($filterUsers as $userOption): ?>
-                                <option value="<?= e($userOption) ?>" <?= ($ipFilters['user'] ?? '') === $userOption ? 'selected' : '' ?>><?= e($userOption) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="ipCategoryFilter">التصنيف</label>
-                        <select id="ipCategoryFilter" name="category">
-                            <option value="">كل التصنيفات</option>
-                            <?php foreach (allowedIpCategories() as $categoryValue => $categoryLabel): ?>
-                                <option value="<?= e($categoryValue) ?>" <?= ($ipFilters['category'] ?? '') === $categoryValue ? 'selected' : '' ?>><?= e($categoryLabel) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="ipExpiry">الانتهاء</label>
-                        <select id="ipExpiry" name="expiry">
-                            <option value="">كل الحالات</option>
-                            <option value="permanent" <?= ($ipFilters['expiry'] ?? '') === 'permanent' ? 'selected' : '' ?>>دائم</option>
-                            <option value="temporary" <?= ($ipFilters['expiry'] ?? '') === 'temporary' ? 'selected' : '' ?>>مؤقت نشط</option>
-                            <option value="today" <?= ($ipFilters['expiry'] ?? '') === 'today' ? 'selected' : '' ?>>ينتهي اليوم</option>
-                            <option value="expiring_7" <?= ($ipFilters['expiry'] ?? '') === 'expiring_7' ? 'selected' : '' ?>>ينتهي خلال 7 أيام</option>
-                            <option value="expired" <?= ($ipFilters['expiry'] ?? '') === 'expired' ? 'selected' : '' ?>>منتهي</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="ipDateFrom">من تاريخ</label>
-                        <input id="ipDateFrom" type="date" name="date_from" value="<?= e($ipFilters['date_from'] ?? '') ?>">
-                    </div>
-                    <div class="form-group">
-                        <label for="ipDateTo">إلى تاريخ</label>
-                        <input id="ipDateTo" type="date" name="date_to" value="<?= e($ipFilters['date_to'] ?? '') ?>">
-                    </div>
-                    <div class="form-group">
-                        <label for="ipSort">الفرز</label>
-                        <select id="ipSort" name="ip_sort">
-                            <option value="natural" <?= $ipSort === 'natural' ? 'selected' : '' ?>>الترتيب الطبيعي حسب IP</option>
-                            <option value="severity_desc" <?= $ipSort === 'severity_desc' ? 'selected' : '' ?>>الأعلى خطورة أولاً</option>
-                            <option value="severity_asc" <?= $ipSort === 'severity_asc' ? 'selected' : '' ?>>الأقل خطورة أولاً</option>
-                            <option value="malicious_desc" <?= $ipSort === 'malicious_desc' ? 'selected' : '' ?>>أعلى VT Score أولاً</option>
-                            <option value="malicious_asc" <?= $ipSort === 'malicious_asc' ? 'selected' : '' ?>>أقل VT Score أولاً</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <button class="btn btn-secondary" type="submit">تطبيق الفلاتر</button>
-                    </div>
-                    <div class="form-group">
-                        <a class="btn btn-secondary" href="<?= e(currentUrlWithout(['ip_query', 'country', 'vt_status', 'asn', 'user', 'category', 'expiry', 'date_from', 'date_to', 'ip_page'])) ?>">مسح الفلاتر</a>
-                    </div>
-                </form>
+                <?php $activeIpFilterCount = count(array_filter($ipFilters, static fn ($value): bool => (string) $value !== '')); ?>
+                <details class="filters-drawer" <?= $activeIpFilterCount > 0 ? 'open' : '' ?>>
+                    <summary>
+                        <span class="filter-summary-title"><?= iconSvg('filter') ?> الفلاتر والبحث</span>
+                        <span class="filter-summary-meta"><?= number_format($activeIpFilterCount) ?> فلتر نشط · <?= number_format($ipTotalRows) ?> نتيجة</span>
+                    </summary>
+
+                    <form class="filter-panel" method="get">
+                        <input type="hidden" name="page" value="ips">
+                        <input type="hidden" name="ip_page" value="1">
+                        <input type="hidden" name="log_page" value="<?= (int) $logPage ?>">
+                        <div class="form-group search-wide">
+                            <label for="ipSearch">بحث IP</label>
+                            <input type="search" id="ipSearch" name="ip_query" value="<?= e($ipSearchQuery) ?>" placeholder="مثال: 8.8 أو 192.168.1.10" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="ipCountry">الدولة</label>
+                            <select id="ipCountry" name="country">
+                                <option value="">كل الدول</option>
+                                <?php foreach ($filterCountries as $country): ?>
+                                    <option value="<?= e($country) ?>" <?= ($ipFilters['country'] ?? '') === $country ? 'selected' : '' ?>><?= e($country) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ipVtStatus">VirusTotal</label>
+                            <select id="ipVtStatus" name="vt_status">
+                                <option value="">كل الحالات</option>
+                                <?php foreach (['خطير', 'مشبوه', 'نظيف', 'مؤجل', 'في الطابور', 'نتيجة حديثة'] as $statusOption): ?>
+                                    <option value="<?= e($statusOption) ?>" <?= ($ipFilters['vt_status'] ?? '') === $statusOption ? 'selected' : '' ?>><?= e($statusOption) ?></option>
+                                <?php endforeach; ?>
+                                <option value="__unscanned" <?= ($ipFilters['vt_status'] ?? '') === '__unscanned' ? 'selected' : '' ?>>لم يتم الفحص</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ipAsn">ASN</label>
+                            <select id="ipAsn" name="asn">
+                                <option value="">كل ASN</option>
+                                <?php foreach ($filterAsns as $asn): ?>
+                                    <option value="<?= e($asn) ?>" <?= ($ipFilters['asn'] ?? '') === (string) $asn ? 'selected' : '' ?>>AS<?= e($asn) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ipUser">المستخدم</label>
+                            <select id="ipUser" name="user">
+                                <option value="">كل المستخدمين</option>
+                                <?php foreach ($filterUsers as $userOption): ?>
+                                    <option value="<?= e($userOption) ?>" <?= ($ipFilters['user'] ?? '') === $userOption ? 'selected' : '' ?>><?= e($userOption) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ipCategoryFilter">التصنيف</label>
+                            <select id="ipCategoryFilter" name="category">
+                                <option value="">كل التصنيفات</option>
+                                <?php foreach (allowedIpCategories() as $categoryValue => $categoryLabel): ?>
+                                    <option value="<?= e($categoryValue) ?>" <?= ($ipFilters['category'] ?? '') === $categoryValue ? 'selected' : '' ?>><?= e($categoryLabel) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ipExpiry">الانتهاء</label>
+                            <select id="ipExpiry" name="expiry">
+                                <option value="">كل الحالات</option>
+                                <option value="permanent" <?= ($ipFilters['expiry'] ?? '') === 'permanent' ? 'selected' : '' ?>>دائم</option>
+                                <option value="temporary" <?= ($ipFilters['expiry'] ?? '') === 'temporary' ? 'selected' : '' ?>>مؤقت نشط</option>
+                                <option value="today" <?= ($ipFilters['expiry'] ?? '') === 'today' ? 'selected' : '' ?>>ينتهي اليوم</option>
+                                <option value="expiring_7" <?= ($ipFilters['expiry'] ?? '') === 'expiring_7' ? 'selected' : '' ?>>ينتهي خلال 7 أيام</option>
+                                <option value="expired" <?= ($ipFilters['expiry'] ?? '') === 'expired' ? 'selected' : '' ?>>منتهي</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ipDateFrom">من تاريخ</label>
+                            <input id="ipDateFrom" type="date" name="date_from" value="<?= e($ipFilters['date_from'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label for="ipDateTo">إلى تاريخ</label>
+                            <input id="ipDateTo" type="date" name="date_to" value="<?= e($ipFilters['date_to'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label for="ipSort">الفرز</label>
+                            <select id="ipSort" name="ip_sort">
+                                <option value="natural" <?= $ipSort === 'natural' ? 'selected' : '' ?>>الترتيب الطبيعي حسب IP</option>
+                                <option value="severity_desc" <?= $ipSort === 'severity_desc' ? 'selected' : '' ?>>الأعلى خطورة أولاً</option>
+                                <option value="severity_asc" <?= $ipSort === 'severity_asc' ? 'selected' : '' ?>>الأقل خطورة أولاً</option>
+                                <option value="malicious_desc" <?= $ipSort === 'malicious_desc' ? 'selected' : '' ?>>أعلى VT Score أولاً</option>
+                                <option value="malicious_asc" <?= $ipSort === 'malicious_asc' ? 'selected' : '' ?>>أقل VT Score أولاً</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-secondary" type="submit"><?= iconSvg('search') ?> تطبيق</button>
+                        </div>
+                        <div class="form-group">
+                            <a class="btn btn-secondary" href="<?= e(currentUrlWithout(['ip_query', 'country', 'vt_status', 'asn', 'user', 'category', 'expiry', 'date_from', 'date_to', 'ip_page', 'log_page'])) ?>"><?= iconSvg('clear') ?> مسح</a>
+                        </div>
+                    </form>
+                </details>
 
                 <form id="bulkVtForm" method="post" onsubmit="return confirmBulkAction(event);">
                     <?= csrfField() ?>
@@ -1731,10 +1891,10 @@ if (!defined('IP_FEED_APP')) {
                     </div>
 
                     <div class="bulk-right">
-                        <button class="btn btn-secondary" type="submit" name="bulk_check_vt" value="selected" form="bulkVtForm" <?= $vtApiKey === '' || $ipTotalRows === 0 || !canCheckVirusTotal($users) ? 'disabled' : '' ?>>فحص المحدد VT</button>
-                        <button class="btn btn-secondary" type="submit" name="bulk_export_ips" value="selected" form="bulkVtForm" onclick="document.getElementById('exportFormat').value='csv'" <?= $ipTotalRows === 0 ? 'disabled' : '' ?>>CSV</button>
-                        <button class="btn btn-secondary" type="submit" name="bulk_export_ips" value="selected" form="bulkVtForm" onclick="document.getElementById('exportFormat').value='txt'" <?= $ipTotalRows === 0 ? 'disabled' : '' ?>>TXT</button>
-                        <button class="btn btn-danger" type="submit" name="bulk_delete_ips" value="selected" form="bulkVtForm" <?= $ipTotalRows === 0 || !canModifyIps($users) ? 'disabled' : '' ?>>حذف المحدد</button>
+                        <button class="btn btn-secondary" type="submit" name="bulk_check_vt" value="selected" form="bulkVtForm" <?= $vtApiKey === '' || $ipTotalRows === 0 || !canCheckVirusTotal($users) ? 'disabled' : '' ?>><?= iconSvg('scan') ?> فحص VT</button>
+                        <button class="btn btn-secondary" type="submit" name="bulk_export_ips" value="selected" form="bulkVtForm" onclick="document.getElementById('exportFormat').value='csv'" <?= $ipTotalRows === 0 ? 'disabled' : '' ?>><?= iconSvg('download') ?> CSV</button>
+                        <button class="btn btn-secondary" type="submit" name="bulk_export_ips" value="selected" form="bulkVtForm" onclick="document.getElementById('exportFormat').value='txt'" <?= $ipTotalRows === 0 ? 'disabled' : '' ?>><?= iconSvg('download') ?> TXT</button>
+                        <button class="btn btn-danger" type="submit" name="bulk_delete_ips" value="selected" form="bulkVtForm" <?= $ipTotalRows === 0 || !canModifyIps($users) ? 'disabled' : '' ?>><?= iconSvg('trash') ?> حذف المحدد</button>
                     </div>
                 </div>
 
@@ -1759,7 +1919,7 @@ if (!defined('IP_FEED_APP')) {
                             </div>
                         </div>
                         <div class="bulk-right">
-                            <button class="btn" type="submit" name="bulk_metadata_ips" value="selected" form="bulkVtForm" <?= $ipTotalRows === 0 ? 'disabled' : '' ?>>تحديث التصنيف/الانتهاء</button>
+                            <button class="btn" type="submit" name="bulk_metadata_ips" value="selected" form="bulkVtForm" <?= $ipTotalRows === 0 ? 'disabled' : '' ?>><?= iconSvg('save') ?> تحديث التصنيف/الانتهاء</button>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -1842,12 +2002,12 @@ if (!defined('IP_FEED_APP')) {
                                                 <form method="post" class="inline-form">
                                                     <?= csrfField() ?>
                                                     <input type="hidden" name="check_vt_ip" value="<?= e($ip) ?>">
-                                                    <button type="submit" class="btn btn-secondary" <?= $vtApiKey === '' ? 'disabled' : '' ?>>فحص VT</button>
+                                                    <button type="submit" class="btn btn-secondary" <?= $vtApiKey === '' ? 'disabled' : '' ?>><?= iconSvg('scan') ?> فحص VT</button>
                                                 </form>
                                                 <form method="post" class="inline-form" onsubmit="return confirm('هل تريد حذف هذا IP؟');">
                                                     <?= csrfField() ?>
                                                     <input type="hidden" name="delete_ip" value="<?= e($ip) ?>">
-                                                    <button type="submit" class="btn btn-danger">حذف</button>
+                                                    <button type="submit" class="btn btn-danger"><?= iconSvg('trash') ?> حذف</button>
                                                 </form>
                                             </div>
                                         <?php else: ?>
@@ -1889,17 +2049,17 @@ if (!defined('IP_FEED_APP')) {
                 </div>
 
                 <div class="stats" style="margin-bottom: 18px;">
-                    <div class="stat-card">
+                    <div class="stat-panel">
                         <div class="stat-label">حالة المفتاح</div>
                         <div class="stat-value" style="font-size: 20px;"><?= $vtApiKey === '' ? 'غير مضبوط' : e((string) ($vtConfig['masked'] ?? 'مخفي')) ?></div>
                         <div class="stat-help">المصدر: <?= e((string) ($vtConfig['source_label'] ?? 'غير مضبوط')) ?></div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-panel">
                         <div class="stat-label">آخر تعديل</div>
                         <div class="stat-value" style="font-size: 20px;"><?= e((string) (($vtConfig['settings']['updated_at'] ?? '') ?: '-')) ?></div>
                         <div class="stat-help">بواسطة: <?= e((string) (($vtConfig['settings']['updated_by'] ?? '') ?: '-')) ?></div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-panel">
                         <div class="stat-label">استهلاك اليوم</div>
                         <div class="stat-value" style="font-size: 20px;"><?= number_format((int) ($vtQuotaSnapshot['daily_count'] ?? 0)) ?> / <?= number_format((int) ($vtQuotaSnapshot['daily_quota'] ?? 500)) ?></div>
                         <div class="stat-help">انتظار الطلب التالي: <?= e(secondsToHumanArabic((int) ($vtQuotaSnapshot['wait_seconds'] ?? 0))) ?></div>
@@ -1914,21 +2074,23 @@ if (!defined('IP_FEED_APP')) {
                         <input id="vt_api_key" name="vt_api_key" type="password" placeholder="الصق المفتاح الجديد هنا" minlength="32" autocomplete="new-password">
                     </div>
                     <div class="form-group" style="margin-bottom: 0; grid-column: span 2;">
-                        <button class="btn" type="submit">حفظ / تحديث المفتاح</button>
+                        <button class="btn" type="submit"><?= iconSvg('save') ?> حفظ / تحديث المفتاح</button>
                     </div>
                 </form>
 
                 <form method="post" class="inline-form" style="margin-top: 12px;" onsubmit="return confirm('هل تريد حذف مفتاح VirusTotal المحفوظ من لوحة المدير؟');">
                     <?= csrfField() ?>
                     <input type="hidden" name="vt_settings_action" value="clear">
-                    <button class="btn btn-danger" type="submit" <?= (bool) ($vtConfig['has_saved_key'] ?? false) ? '' : 'disabled' ?>>حذف المفتاح المحفوظ</button>
+                    <button class="btn btn-danger" type="submit" <?= (bool) ($vtConfig['has_saved_key'] ?? false) ? '' : 'disabled' ?>><?= iconSvg('trash') ?> حذف المفتاح المحفوظ</button>
                     <span class="small-meta" style="margin-right: 10px;">إذا كان VT_API_KEY مضبوطاً كمتغير بيئة، سيبقى مستخدماً بعد حذف المفتاح المحفوظ.</span>
                 </form>
 
                 <p class="note">لحماية المفتاح، يتم حفظه في ملف <strong>vt_settings.json</strong> داخل مجلد الإعدادات الخاصة: <span class="kbd"><?= e($appSettingsDir) ?></span>. الأفضل جعل هذا المجلد خارج <strong>public_html</strong> أو <strong>/var/www/html</strong>.</p>
             </div>
         </section>
+        <?php endif; ?>
 
+        <?php if ($currentPage === 'users' && canManageUsers($users)): ?>
         <section class="grid">
             <div class="card span-12">
                 <div class="card-head">
@@ -1967,7 +2129,7 @@ if (!defined('IP_FEED_APP')) {
                         <input id="new_password_confirm" name="new_password_confirm" type="password" minlength="8" placeholder="أعد كتابتها" required>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <button class="btn" type="submit">إضافة مستخدم</button>
+                        <button class="btn" type="submit"><?= iconSvg('add') ?> إضافة مستخدم</button>
                     </div>
                 </form>
 
@@ -2027,13 +2189,13 @@ if (!defined('IP_FEED_APP')) {
                                                 <?= csrfField() ?>
                                                 <input type="hidden" name="user_action" value="update">
                                                 <input type="hidden" name="target_user" value="<?= e($username) ?>">
-                                                <button class="btn btn-secondary" type="submit">حفظ</button>
+                                                <button class="btn btn-secondary" type="submit"><?= iconSvg('save') ?> حفظ</button>
                                             </form>
                                             <form id="<?= e($deleteFormId) ?>" method="post" class="inline-form" onsubmit="return confirm('هل تريد حذف هذا المستخدم؟');">
                                                 <?= csrfField() ?>
                                                 <input type="hidden" name="user_action" value="delete">
                                                 <input type="hidden" name="target_user" value="<?= e($username) ?>">
-                                                <button class="btn btn-danger" type="submit" <?= $isCurrentUser ? 'disabled' : '' ?>>حذف</button>
+                                                <button class="btn btn-danger" type="submit" <?= $isCurrentUser ? 'disabled' : '' ?>><?= iconSvg('trash') ?> حذف</button>
                                             </form>
                                         </div>
                                     </td>
@@ -2046,7 +2208,9 @@ if (!defined('IP_FEED_APP')) {
                 <p class="note">لن تسمح الصفحة بحذف أو تعطيل آخر مدير مفعل. المستخدم بصلاحية <strong>مشاهدة فقط</strong> يستطيع عرض البيانات دون تعديل القائمة أو فحص VirusTotal.</p>
             </div>
         </section>
+        <?php endif; ?>
 
+        <?php if ($currentPage === 'logs' && canManageUsers($users)): ?>
         <section class="grid">
             <div class="card span-12">
                 <div class="card-head">
@@ -2099,7 +2263,7 @@ if (!defined('IP_FEED_APP')) {
         </section>
         <?php endif; ?>
 
-        <?php if ($currentPage === 'settings' && !canManageUsers($users)): ?>
+        <?php if (in_array($currentPage, ['settings', 'users'], true) && !canManageUsers($users)): ?>
         <section class="grid">
             <div class="card span-12">
                 <div class="empty-state">هذه الصفحة مخصصة للمدير فقط.</div>
@@ -2137,7 +2301,7 @@ if (!defined('IP_FEED_APP')) {
         </section>
         <?php endif; ?>
 
-        <?php if ($currentPage === 'dashboard'): ?>
+        <?php if ($currentPage === 'logs'): ?>
         <section class="grid">
             <div class="card span-12">
                 <div class="toolbar">
@@ -2149,7 +2313,7 @@ if (!defined('IP_FEED_APP')) {
                     </div>
 
                     <div class="search-box">
-                        <span>⌕</span>
+                        <span><?= iconSvg('search') ?></span>
                         <input type="search" id="logSearch" placeholder="بحث داخل السجل في الصفحة الحالية..." oninput="filterTable('logSearch', 'logTable')">
                     </div>
                 </div>

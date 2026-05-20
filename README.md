@@ -17,6 +17,7 @@ IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for Fo
 - Bulk IP management: scan, delete, export CSV/TXT, update category, and set expiration dates.
 - IP categories such as Brute Force, Scanner, Spam, TOR, Malware, Botnet, Proxy, and Manual.
 - Advanced filtering by country, VirusTotal status, ASN, user, date range, category, and expiration state.
+- Fixed top navigation with separate Dashboard, IPs, Logs, Users, Settings, and Health pages.
 - System health page for file permissions, SQLite status, and VirusTotal state.
 - Responsive RTL dashboard with improved mobile table views.
 
