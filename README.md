@@ -23,12 +23,19 @@ IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for Fo
 ├── ipfeed/
 │   ├── index.php              # Web dashboard
 │   ├── ips.txt                # Public FortiGate feed output
-│   └── app/                   # Application modules and views
+│   └── app/
+│       ├── bootstrap.php      # Composer/fallback bootstrap
+│       ├── controllers/       # HTTP controller entrypoints
+│       ├── src/               # PSR-4 classes
+│       └── views/             # RTL views
 ├── ip-feed-manager-private/
 │   ├── config.php             # Main configuration
 │   ├── ip_feed.sqlite         # SQLite database
+│   ├── migrations/            # Ordered SQLite migrations
 │   ├── vt_worker.php          # Optional CLI queue worker
+│   ├── run_migrations.py      # Migration runner
 │   └── migrate_json_to_sqlite.py
+├── composer.json
 └── DEPLOYMENT.md              # Arabic deployment and update guide
 ```
 
@@ -49,15 +56,29 @@ IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for Fo
 1. Put `ipfeed/` in the web-accessible directory.
 2. Keep `ip-feed-manager-private/` outside the public web root when possible.
 3. Configure paths in `ip-feed-manager-private/config.php`.
-4. Make sure `pdo_sqlite` is enabled.
-5. Open:
+4. Install Composer autoload when Composer is available:
+
+```bash
+composer install --no-dev --optimize-autoloader
+```
+
+If Composer is not available yet, the application keeps a small fallback autoloader in `ipfeed/app/bootstrap.php`.
+
+5. Run SQLite migrations:
+
+```bash
+python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite
+```
+
+6. Make sure `pdo_sqlite` is enabled.
+7. Open:
 
 ```text
 ipfeed/index.php
 ```
 
-6. Change the default `admin` password when prompted.
-7. Use the generated `ips.txt` link as the FortiGate External Block List source.
+8. Change the default `admin` password when prompted.
+9. Use the generated `ips.txt` link as the FortiGate External Block List source.
 
 ## VirusTotal Queue
 

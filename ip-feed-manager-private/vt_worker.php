@@ -6,8 +6,6 @@ if (PHP_SAPI !== 'cli') {
     exit('Forbidden');
 }
 
-define('IP_FEED_APP', true);
-
 $privateDir = __DIR__;
 $projectDir = dirname(__DIR__);
 $webDir = $projectDir . '/ipfeed';
@@ -54,12 +52,9 @@ if (is_file($configFile)) {
     }
 }
 
-date_default_timezone_set((string) workerConfigValue($config, 'timezone', 'Asia/Aden'));
+require $webDir . '/app/bootstrap.php';
 
-require_once $webDir . '/app/database.php';
-require_once $webDir . '/app/support.php';
-require_once $webDir . '/app/virustotal.php';
-require_once $webDir . '/app/ip_feed.php';
+date_default_timezone_set((string) workerConfigValue($config, 'timezone', 'Asia/Aden'));
 
 $settingsDir = rtrim((string) workerConfigValue($config, 'storage_dir', $privateDir), '/\\');
 $databaseFile = (string) workerConfigValue($config, 'database', $settingsDir . '/ip_feed.sqlite');

@@ -4,6 +4,7 @@
 
 - PHP 8.1 أو أحدث.
 - امتداد `pdo_sqlite`.
+- Composer لتوليد autoload في بيئة الإنتاج. يوجد fallback داخلي إذا لم يتوفر Composer مؤقتا.
 - صلاحية كتابة لمجلد الإعدادات الخاصة وملف `ipfeed/ips.txt`.
 - خادم ويب يدعم PHP مثل Apache أو Nginx مع PHP-FPM.
 
@@ -12,7 +13,10 @@
 - `ipfeed/` هو مجلد الويب.
 - `ipfeed/ips.txt` هو الملف الوحيد الذي يجب أن يكون مكشوفا لـ FortiGate.
 - `ipfeed/index.php` هو لوحة الإدارة.
+- `ipfeed/app/bootstrap.php` يقوم بتحميل Composer autoload أو fallback داخلي.
+- `ipfeed/app/src/` يحتوي طبقات `Controllers`, `Services`, `Repositories`, و `Config`.
 - `ip-feed-manager-private/` يحتوي الإعدادات وقاعدة SQLite والملفات الحساسة.
+- `ip-feed-manager-private/migrations/` يحتوي migrations منظمة لقاعدة SQLite.
 
 يفضل نقل `ip-feed-manager-private/` خارج مجلد الويب. إذا تعذر ذلك، تأكد أن ملف `.htaccess` يمنع الوصول المباشر.
 
@@ -56,6 +60,12 @@ chmod 640 ip-feed-manager-private/ip_feed.sqlite
 - `ip-feed-manager-private/login_attempts.json`
 
 ## الترحيل إلى SQLite
+
+لتطبيق migrations المنظمة:
+
+```bash
+python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite
+```
 
 عند وجود ملفات JSON قديمة، شغل:
 
@@ -102,8 +112,10 @@ ipfeed/index.php?page=health
 1. انسخ `ip-feed-manager-private/` احتياطيا.
 2. انسخ `ipfeed/ips.txt` احتياطيا.
 3. استبدل ملفات التطبيق.
-4. شغل سكربت الترحيل مرة أخرى.
-5. افتح صفحة صحة النظام وتأكد من عدم وجود أخطاء.
+4. شغل `composer install --no-dev --optimize-autoloader` إذا كان Composer متاحا.
+5. شغل `python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite`.
+6. شغل سكربت ترحيل JSON عند الحاجة.
+7. افتح صفحة صحة النظام وتأكد من عدم وجود أخطاء.
 
 ## FortiGate
 

@@ -1,0 +1,28 @@
+{
+    "name": "gamal3330/ipfeed",
+    "description": "PHP IP Feed Manager dashboard for FortiGate blocklist feeds.",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "IpFeed\\": "ipfeed/app/src/"
+        },
+        "files": [
+            "ipfeed/app/database.php",
+            "ipfeed/app/support.php",
+            "ipfeed/app/auth.php",
+            "ipfeed/app/users.php",
+            "ipfeed/app/virustotal.php",
+            "ipfeed/app/ip_feed.php",
+            "ipfeed/app/geo.php"
+        ]
+    },
+    "scripts": {
+        "migrate": "python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite"
+    }
+}
