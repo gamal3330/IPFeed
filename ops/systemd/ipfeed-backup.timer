@@ -1,0 +1,10 @@
+[Unit]
+Description=Run IPFeed backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

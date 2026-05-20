@@ -1,0 +1,20 @@
+[Unit]
+Description=IPFeed VirusTotal queue worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+Environment=IP_FEED_PROJECT_DIR=/var/www/IPFeed
+Environment=IP_FEED_VT_LIMIT=1
+Environment=IP_FEED_VT_SLEEP=2
+EnvironmentFile=-/etc/ipfeed/ipfeed.env
+ExecStart=/usr/bin/env bash -lc 'cd "$IP_FEED_PROJECT_DIR" && /usr/bin/php "$IP_FEED_PROJECT_DIR/ip-feed-manager-private/vt_worker.php" --limit="${IP_FEED_VT_LIMIT:-1}" --sleep="${IP_FEED_VT_SLEEP:-2}"'
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+vendor/
+__pycache__/
+*.pyc
+
+# Runtime artifacts created on the server.
+ip-feed-manager-private/logs/
+ip-feed-manager-private/backups/
+*.log

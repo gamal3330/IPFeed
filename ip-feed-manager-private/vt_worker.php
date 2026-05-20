@@ -57,6 +57,8 @@ require $webDir . '/app/bootstrap.php';
 date_default_timezone_set((string) workerConfigValue($config, 'timezone', 'Asia/Aden'));
 
 $settingsDir = rtrim((string) workerConfigValue($config, 'storage_dir', $privateDir), '/\\');
+$operationsLogsDir = rtrim((string) workerConfigValue($config, 'operations.logs_dir', $settingsDir . '/logs'), '/\\');
+$workerLogFile = (string) workerConfigValue($config, 'operations.worker_log', $operationsLogsDir . '/vt_worker.log');
 $databaseFile = (string) workerConfigValue($config, 'database', $settingsDir . '/ip_feed.sqlite');
 $logFile = (string) workerConfigValue($config, 'files.log', $databaseFile);
 $vtSettingsFile = (string) workerConfigValue($config, 'files.vt_settings', $settingsDir . '/vt_settings.json');
@@ -69,6 +71,8 @@ $legacyLogFile = (string) workerConfigValue($config, 'legacy_json.log', $setting
 $legacyGeoCacheFile = (string) workerConfigValue($config, 'legacy_json.geo_cache', $settingsDir . '/ip_geo_cache.json');
 $limit = max(1, min(50, (int) workerCliOption($argv, 'limit', '1')));
 $sleepSeconds = max(0, min(60, (int) workerCliOption($argv, 'sleep', '2')));
+
+\IpFeed\Services\AppLogger::configurePhpErrorLog($workerLogFile);
 
 ensurePrivateSettingsDir($settingsDir);
 ensureSqliteDatabase($databaseFile);
@@ -84,6 +88,7 @@ $vtConfig = resolveVirusTotalConfig($vtSettingsFile, $vtEnvApiKey);
 $vtApiKey = (string) ($vtConfig['api_key'] ?? '');
 
 if ($vtApiKey === '') {
+    \IpFeed\Services\AppLogger::warning($workerLogFile, 'vt_worker_missing_api_key');
     fwrite(STDERR, "VirusTotal API key is not configured.\n");
     exit(1);
 }
@@ -103,9 +108,19 @@ for ($i = 0; $i < $limit; $i++) {
     }
 }
 
-echo json_encode([
+$output = [
     'ok' => true,
     'processed' => count(array_filter($results, static fn (array $row): bool => (bool) ($row['processed'] ?? false))),
     'results' => $results,
     'stats' => virusTotalQueueStats($databaseFile),
-], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL;
+];
+
+\IpFeed\Services\AppLogger::info($workerLogFile, 'vt_worker_run', [
+    'limit' => $limit,
+    'sleep_seconds' => $sleepSeconds,
+    'processed' => (int) $output['processed'],
+    'queued' => (int) ($output['stats']['queued'] ?? 0),
+    'failed' => (int) ($output['stats']['failed'] ?? 0),
+]);
+
+echo json_encode($output, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL;

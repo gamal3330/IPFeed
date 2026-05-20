@@ -1,0 +1,6 @@
+# Edit /var/www/IPFeed to your real project path.
+# VirusTotal worker: one queued IP per minute, respecting the application rate limit.
+* * * * * cd /var/www/IPFeed && /usr/bin/php ip-feed-manager-private/vt_worker.php --limit=1 --sleep=2 >> ip-feed-manager-private/logs/vt_worker.cron.log 2>&1
+
+# Daily backup: SQLite database + public FortiGate feed.
+30 2 * * * cd /var/www/IPFeed && /usr/bin/python3 ip-feed-manager-private/backup.py --retention-days=14 >> ip-feed-manager-private/logs/backup.cron.log 2>&1

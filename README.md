@@ -9,6 +9,10 @@ IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for Fo
 - Login attempt rate limiting and login event history.
 - SQLite storage for users, logs, geo cache, VirusTotal results, queue state, IP metadata, and login events.
 - VirusTotal queue with gradual background processing.
+- systemd/cron templates for stable VirusTotal worker operation.
+- JSONL operational logs for web/runtime, VirusTotal worker, and backups.
+- Automated SQLite and `ips.txt` backups with retention cleanup.
+- Public monitoring health check endpoint with optional token protection.
 - Last-result caching to avoid repeated VirusTotal checks.
 - Bulk IP management: scan, delete, export CSV/TXT, update category, and set expiration dates.
 - IP categories such as Brute Force, Scanner, Spam, TOR, Malware, Botnet, Proxy, and Manual.
@@ -32,9 +36,13 @@ IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for Fo
 │   ├── config.php             # Main configuration
 │   ├── ip_feed.sqlite         # SQLite database
 │   ├── migrations/            # Ordered SQLite migrations
+│   ├── backup.py              # SQLite + ips.txt backup runner
 │   ├── vt_worker.php          # Optional CLI queue worker
 │   ├── run_migrations.py      # Migration runner
 │   └── migrate_json_to_sqlite.py
+├── ops/
+│   ├── cron/                  # Cron examples
+│   └── systemd/               # systemd service/timer examples
 ├── composer.json
 └── DEPLOYMENT.md              # Arabic deployment and update guide
 ```
@@ -50,6 +58,8 @@ IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for Fo
   - `ip-feed-manager-private/vt_rate_limit.json`
   - `ip-feed-manager-private/vt_settings.json`
   - `ip-feed-manager-private/login_attempts.json`
+  - `ip-feed-manager-private/logs/`
+  - `ip-feed-manager-private/backups/`
 
 ## Quick Start
 
@@ -82,13 +92,44 @@ ipfeed/index.php
 
 ## VirusTotal Queue
 
-The web dashboard can process the queue gradually while it is open. For stable background operation, run the CLI worker with cron:
+The web dashboard can process the queue gradually while it is open. For stable background operation, use the included systemd timer:
+
+```bash
+sudo mkdir -p /etc/ipfeed
+sudo cp ops/systemd/ipfeed.env.example /etc/ipfeed/ipfeed.env
+sudo nano /etc/ipfeed/ipfeed.env
+sudo cp ops/systemd/ipfeed-vt-worker.service /etc/systemd/system/
+sudo cp ops/systemd/ipfeed-vt-worker.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ipfeed-vt-worker.timer
+```
+
+Cron is also supported:
 
 ```cron
-* * * * * php /path/to/ip-feed-manager-private/vt_worker.php --limit=1 >/dev/null 2>&1
+* * * * * cd /path/to/IPFeed && php ip-feed-manager-private/vt_worker.php --limit=1 --sleep=2 >> ip-feed-manager-private/logs/vt_worker.cron.log 2>&1
 ```
 
 Increase `--limit` only if your VirusTotal quota allows it.
+
+## Backups
+
+Create a backup manually:
+
+```bash
+python3 ip-feed-manager-private/backup.py --retention-days=14
+```
+
+Or enable the daily systemd timer:
+
+```bash
+sudo cp ops/systemd/ipfeed-backup.service /etc/systemd/system/
+sudo cp ops/systemd/ipfeed-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ipfeed-backup.timer
+```
+
+Backups are written to `ip-feed-manager-private/backups/` and operational logs to `ip-feed-manager-private/logs/`.
 
 ## System Health
 
@@ -99,6 +140,14 @@ ipfeed/index.php?page=health
 ```
 
 This page checks file permissions, private directory placement, `.htaccess` protection, SQLite integrity, and VirusTotal queue state.
+
+For external monitoring, use:
+
+```text
+ipfeed/index.php?healthcheck=1
+```
+
+If `healthcheck.token` or `IP_FEED_HEALTH_TOKEN` is set, send it as `?token=...`, `Authorization: Bearer ...`, or `X-IPFeed-Health-Token: ...`.
 
 ## Deployment Guide
 

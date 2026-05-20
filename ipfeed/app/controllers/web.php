@@ -47,17 +47,6 @@ if ($appSettingsDir === '') {
 
 date_default_timezone_set((string) appConfigValue($appConfig, 'timezone', 'Asia/Aden'));
 
-$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? null) === '443');
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => $isHttps,
-    'httponly' => true,
-    'samesite' => 'Strict',
-]);
-session_start();
-
 $databaseFile = (string) appConfigValue($appConfig, 'database', $appSettingsDir . '/ip_feed.sqlite');
 $ipsFile = (string) appConfigValue($appConfig, 'files.feed', $webRoot . '/ips.txt');
 $usersFile = (string) appConfigValue($appConfig, 'files.users', $databaseFile);
@@ -110,6 +99,45 @@ $loginRateLimitMaxAttempts = max(1, (int) appConfigValue($appConfig, 'security.l
 $loginRateLimitWindowSeconds = max(60, (int) appConfigValue($appConfig, 'security.login_rate_limit.window_seconds', 900));
 $loginRateLimitLockSeconds = max(60, (int) appConfigValue($appConfig, 'security.login_rate_limit.lock_seconds', 900));
 
+$operationsLogsDir = rtrim((string) appConfigValue($appConfig, 'operations.logs_dir', $appSettingsDir . '/logs'), '/\\');
+$appLogFile = (string) appConfigValue($appConfig, 'operations.app_log', $operationsLogsDir . '/app.log');
+$backupDir = rtrim((string) appConfigValue($appConfig, 'backup.dir', $appSettingsDir . '/backups'), '/\\');
+$backupMaxAgeHours = max(1, (int) appConfigValue($appConfig, 'backup.max_age_hours', 30));
+$healthCheckEnabled = (bool) appConfigValue($appConfig, 'healthcheck.enabled', true);
+$healthCheckToken = trim((string) (getenv('IP_FEED_HEALTH_TOKEN') ?: ($_SERVER['IP_FEED_HEALTH_TOKEN'] ?? appConfigValue($appConfig, 'healthcheck.token', ''))));
+$healthCheckFailOnWarning = (bool) appConfigValue($appConfig, 'healthcheck.fail_on_warning', false);
+
+\IpFeed\Services\AppLogger::configurePhpErrorLog($appLogFile);
+
+$vtConfig = resolveVirusTotalConfig($vtSettingsFile, $vtEnvApiKey);
+$vtApiKey = (string) ($vtConfig['api_key'] ?? '');
+
+if (isMonitoringHealthCheckRequest()) {
+    renderMonitoringHealthCheck([
+        'enabled' => $healthCheckEnabled,
+        'token' => $healthCheckToken,
+        'fail_on_warning' => $healthCheckFailOnWarning,
+        'database_file' => $databaseFile,
+        'ips_file' => $ipsFile,
+        'settings_dir' => $appSettingsDir,
+        'app_log_file' => $appLogFile,
+        'backup_dir' => $backupDir,
+        'backup_max_age_hours' => $backupMaxAgeHours,
+        'vt_api_configured' => $vtApiKey !== '',
+    ]);
+}
+
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? null) === '443');
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '',
+    'secure' => $isHttps,
+    'httponly' => true,
+    'samesite' => 'Strict',
+]);
+session_start();
+
 ensurePrivateSettingsDir($appSettingsDir);
 ensureSqliteDatabase($databaseFile);
 migrateLegacyJsonToSqlite($databaseFile, [
@@ -146,8 +174,6 @@ $message = '';
 $error = '';
 $requestMethod = (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET');
 ensureCsrfToken();
-$vtConfig = resolveVirusTotalConfig($vtSettingsFile, $vtEnvApiKey);
-$vtApiKey = (string) ($vtConfig['api_key'] ?? '');
 
 $users = readUsers($usersFile);
 if (!file_exists($usersFile) && usersStorageError($usersFile) === '') {
@@ -897,6 +923,7 @@ $settingsOutsideWeb = !str_starts_with(rtrim($settingsRealPath, '/\\') . DIRECTO
 $storageIssue = storageError($ipsFile, $logFile);
 $databaseIssue = databaseStorageError($databaseFile);
 $vtQuotaWait = (int) ($vtQuotaSnapshot['wait_seconds'] ?? 0);
+$backupSnapshot = latestBackupSnapshot($backupDir, $backupMaxAgeHours);
 
 $systemHealthChecks = [
     [
@@ -946,6 +973,18 @@ $systemHealthChecks = [
         'name' => 'قابلية الكتابة',
         'status' => $storageIssue === '' ? 'ok' : 'error',
         'detail' => $storageIssue === '' ? 'ملفات التشغيل قابلة للقراءة والكتابة.' : $storageIssue,
+    ],
+    [
+        'group' => 'التشغيل',
+        'name' => 'سجل التطبيق',
+        'status' => is_dir($operationsLogsDir) && is_writable($operationsLogsDir) && (file_exists($appLogFile) ? is_writable($appLogFile) : true) ? 'ok' : 'warning',
+        'detail' => $appLogFile . ' · ' . filePermissionSummary(file_exists($appLogFile) ? $appLogFile : $operationsLogsDir),
+    ],
+    [
+        'group' => 'التشغيل',
+        'name' => 'آخر نسخة احتياطية',
+        'status' => (string) ($backupSnapshot['status'] ?? 'warning'),
+        'detail' => (string) ($backupSnapshot['detail'] ?? 'لا توجد معلومات عن النسخ الاحتياطي.'),
     ],
     [
         'group' => 'VirusTotal',

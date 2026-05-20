@@ -39,6 +39,7 @@ function secondsToHumanArabic(int $seconds): string
 function jsonResponse(array $payload): void
 {
     header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, max-age=0');
     echo json_encode($payload, JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -89,4 +90,204 @@ function filePermissionSummary(string $path): string
     }
 
     return $mode . ' · ' . implode(', ', $flags);
+}
+
+function isMonitoringHealthCheckRequest(): bool
+{
+    return isset($_GET['healthcheck']) || isset($_GET['health']);
+}
+
+function monitoringHealthRequestToken(): string
+{
+    $headerToken = trim((string) ($_SERVER['HTTP_X_IPFEED_HEALTH_TOKEN'] ?? ''));
+
+    if ($headerToken !== '') {
+        return $headerToken;
+    }
+
+    $authorization = trim((string) ($_SERVER['HTTP_AUTHORIZATION'] ?? ''));
+    if (str_starts_with($authorization, 'Bearer ')) {
+        return trim(substr($authorization, 7));
+    }
+
+    return trim((string) ($_GET['token'] ?? ''));
+}
+
+function latestBackupSnapshot(string $backupDir, int $maxAgeHours): array
+{
+    $maxAgeHours = max(1, $maxAgeHours);
+
+    if (!is_dir($backupDir)) {
+        return [
+            'status' => 'warning',
+            'detail' => 'لم يتم إنشاء مجلد النسخ الاحتياطي بعد.',
+            'age_seconds' => null,
+            'latest_at' => '',
+        ];
+    }
+
+    $manifestFiles = glob(rtrim($backupDir, '/\\') . '/backup_*.json') ?: [];
+    usort($manifestFiles, static fn (string $a, string $b): int => (filemtime($b) ?: 0) <=> (filemtime($a) ?: 0));
+
+    if (empty($manifestFiles)) {
+        return [
+            'status' => 'warning',
+            'detail' => 'لا توجد نسخة احتياطية مسجلة.',
+            'age_seconds' => null,
+            'latest_at' => '',
+        ];
+    }
+
+    $latest = $manifestFiles[0];
+    $mtime = filemtime($latest) ?: 0;
+    $ageSeconds = $mtime > 0 ? max(0, time() - $mtime) : null;
+    $status = $ageSeconds !== null && $ageSeconds <= ($maxAgeHours * 3600) ? 'ok' : 'warning';
+    $latestAt = $mtime > 0 ? date('Y-m-d H:i:s', $mtime) : '';
+    $detail = $status === 'ok'
+        ? 'آخر نسخة احتياطية: ' . $latestAt
+        : 'آخر نسخة احتياطية قديمة أو غير معروفة: ' . ($latestAt !== '' ? $latestAt : 'لا يوجد');
+
+    return [
+        'status' => $status,
+        'detail' => $detail,
+        'age_seconds' => $ageSeconds,
+        'latest_at' => $latestAt,
+    ];
+}
+
+function renderMonitoringHealthCheck(array $options): void
+{
+    $enabled = (bool) ($options['enabled'] ?? true);
+
+    if (!$enabled) {
+        http_response_code(404);
+        jsonResponse([
+            'ok' => false,
+            'status' => 'disabled',
+            'service' => 'ipfeed',
+            'checked_at' => gmdate('Y-m-d\TH:i:s\Z'),
+        ]);
+    }
+
+    $configuredToken = trim((string) ($options['token'] ?? ''));
+
+    if ($configuredToken !== '' && !hash_equals($configuredToken, monitoringHealthRequestToken())) {
+        http_response_code(403);
+        jsonResponse([
+            'ok' => false,
+            'status' => 'unauthorized',
+            'service' => 'ipfeed',
+            'checked_at' => gmdate('Y-m-d\TH:i:s\Z'),
+        ]);
+    }
+
+    $payload = buildMonitoringHealthPayload($options);
+
+    if (!($payload['ok'] ?? false)) {
+        $appLogFile = (string) ($options['app_log_file'] ?? '');
+        if ($appLogFile !== '') {
+            \IpFeed\Services\AppLogger::warning($appLogFile, 'healthcheck_not_ok', [
+                'status' => (string) ($payload['status'] ?? 'unknown'),
+            ]);
+        }
+
+        http_response_code(503);
+    }
+
+    jsonResponse($payload);
+}
+
+function buildMonitoringHealthPayload(array $options): array
+{
+    $databaseFile = (string) ($options['database_file'] ?? '');
+    $ipsFile = (string) ($options['ips_file'] ?? '');
+    $settingsDir = (string) ($options['settings_dir'] ?? '');
+    $appLogFile = (string) ($options['app_log_file'] ?? '');
+    $backupDir = (string) ($options['backup_dir'] ?? '');
+    $backupMaxAgeHours = max(1, (int) ($options['backup_max_age_hours'] ?? 30));
+    $vtApiConfigured = (bool) ($options['vt_api_configured'] ?? false);
+    $failOnWarning = (bool) ($options['fail_on_warning'] ?? false);
+    $includeDetails = (bool) ($options['include_details'] ?? false);
+    $checks = [];
+    $metrics = [];
+
+    $addCheck = static function (string $key, string $status, string $message, array $details = []) use (&$checks, $includeDetails): void {
+        $check = [
+            'status' => $status,
+            'message' => $message,
+        ];
+
+        if ($includeDetails) {
+            $check['details'] = $details;
+        }
+
+        $checks[$key] = $check;
+    };
+
+    $feedOk = $ipsFile !== '' && is_file($ipsFile) && is_readable($ipsFile) && is_writable($ipsFile);
+    $addCheck('feed_file', $feedOk ? 'ok' : 'error', $feedOk ? 'ips.txt جاهز للقراءة والكتابة.' : 'ips.txt غير جاهز للقراءة والكتابة.');
+
+    if ($feedOk) {
+        $lines = file($ipsFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $metrics['feed_ips'] = is_array($lines) ? count($lines) : 0;
+    }
+
+    $settingsOk = $settingsDir !== '' && is_dir($settingsDir) && is_readable($settingsDir) && is_writable($settingsDir);
+    $addCheck('private_storage', $settingsOk ? 'ok' : 'error', $settingsOk ? 'مجلد التشغيل الخاص جاهز.' : 'مجلد التشغيل الخاص غير جاهز.');
+
+    $logDir = $appLogFile !== '' ? dirname($appLogFile) : '';
+    $logOk = $logDir !== '' && is_dir($logDir) && is_writable($logDir) && (file_exists($appLogFile) ? is_writable($appLogFile) : is_writable($logDir));
+    $addCheck('app_logs', $logOk ? 'ok' : 'warning', $logOk ? 'سجل التطبيق قابل للكتابة.' : 'سجل التطبيق غير جاهز للكتابة.');
+
+    $backupSnapshot = latestBackupSnapshot($backupDir, $backupMaxAgeHours);
+    $addCheck('backup', (string) $backupSnapshot['status'], (string) $backupSnapshot['detail']);
+    if (isset($backupSnapshot['age_seconds'])) {
+        $metrics['last_backup_age_seconds'] = $backupSnapshot['age_seconds'];
+    }
+
+    if (!extension_loaded('pdo_sqlite')) {
+        $addCheck('sqlite', 'error', 'امتداد pdo_sqlite غير مفعل.');
+    } elseif ($databaseFile === '' || !is_file($databaseFile) || !is_readable($databaseFile)) {
+        $addCheck('sqlite', 'error', 'قاعدة SQLite غير موجودة أو غير قابلة للقراءة.');
+    } else {
+        try {
+            $db = new PDO('sqlite:' . $databaseFile);
+            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $integrity = (string) $db->query('PRAGMA integrity_check')->fetchColumn();
+
+            if ($integrity === 'ok') {
+                $addCheck('sqlite', 'ok', 'SQLite integrity_check = ok.');
+            } else {
+                $addCheck('sqlite', 'error', 'فشل فحص سلامة SQLite.');
+            }
+
+            $metrics['logs'] = (int) $db->query('SELECT COUNT(*) FROM logs')->fetchColumn();
+            $metrics['users'] = (int) $db->query('SELECT COUNT(*) FROM users')->fetchColumn();
+
+            $queueRows = $db->query('SELECT status, COUNT(*) AS total FROM vt_queue GROUP BY status')->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($queueRows ?: [] as $row) {
+                $metrics['vt_queue_' . (string) ($row['status'] ?? 'unknown')] = (int) ($row['total'] ?? 0);
+            }
+        } catch (Throwable $exception) {
+            $addCheck('sqlite', 'error', 'تعذر فحص SQLite.');
+            $metrics['sqlite_error'] = $includeDetails ? $exception->getMessage() : 'hidden';
+        }
+    }
+
+    $addCheck('virustotal_key', $vtApiConfigured ? 'ok' : 'warning', $vtApiConfigured ? 'مفتاح VirusTotal مضبوط.' : 'مفتاح VirusTotal غير مضبوط.');
+
+    $statuses = array_map(static fn (array $check): string => (string) ($check['status'] ?? 'unknown'), $checks);
+    $hasError = in_array('error', $statuses, true);
+    $hasWarning = in_array('warning', $statuses, true);
+    $status = $hasError ? 'error' : ($hasWarning ? 'warning' : 'ok');
+    $ok = !$hasError && (!$failOnWarning || !$hasWarning);
+
+    return [
+        'ok' => $ok,
+        'status' => $status,
+        'service' => 'ipfeed',
+        'checked_at' => gmdate('Y-m-d\TH:i:s\Z'),
+        'checks' => $checks,
+        'metrics' => $metrics,
+    ];
 }

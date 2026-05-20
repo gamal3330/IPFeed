@@ -25,6 +25,25 @@ return [
         'login_rate_limit' => __DIR__ . '/login_attempts.json',
     ],
 
+    'operations' => [
+        'logs_dir' => __DIR__ . '/logs',
+        'app_log' => __DIR__ . '/logs/app.log',
+        'worker_log' => __DIR__ . '/logs/vt_worker.log',
+        'backup_log' => __DIR__ . '/logs/backup.log',
+    ],
+
+    'backup' => [
+        'dir' => __DIR__ . '/backups',
+        'retention_days' => 14,
+        'max_age_hours' => 30,
+    ],
+
+    'healthcheck' => [
+        'enabled' => true,
+        'token' => '',
+        'fail_on_warning' => false,
+    ],
+
     'legacy_json' => [
         'users' => __DIR__ . '/users.json',
         'log' => __DIR__ . '/ips_log.json',

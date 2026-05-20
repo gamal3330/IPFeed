@@ -23,6 +23,8 @@
         ]
     },
     "scripts": {
-        "migrate": "python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite"
+        "migrate": "python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite",
+        "backup": "python3 ip-feed-manager-private/backup.py",
+        "vt-worker": "php ip-feed-manager-private/vt_worker.php --limit=1"
     }
 }

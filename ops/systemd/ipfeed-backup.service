@@ -1,0 +1,17 @@
+[Unit]
+Description=IPFeed SQLite and feed backup
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+Environment=IP_FEED_PROJECT_DIR=/var/www/IPFeed
+Environment=IP_FEED_BACKUP_RETENTION_DAYS=14
+EnvironmentFile=-/etc/ipfeed/ipfeed.env
+ExecStart=/usr/bin/env bash -lc 'cd "$IP_FEED_PROJECT_DIR" && /usr/bin/python3 "$IP_FEED_PROJECT_DIR/ip-feed-manager-private/backup.py" --retention-days="${IP_FEED_BACKUP_RETENTION_DAYS:-14}"'
+
+[Install]
+WantedBy=multi-user.target
