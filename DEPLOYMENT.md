@@ -57,6 +57,16 @@ sudo ./install.sh \
 - تشغيل migrations على SQLite.
 - ضبط صلاحيات أساسية.
 
+بعد التثبيت أو بعد أي نقل للسيرفر، شغل أداة التشخيص:
+
+```bash
+sudo ./doctor.sh \
+  --project-dir /var/www/IPFeed \
+  --private-dir /var/lib/ipfeed \
+  --feed-file /var/www/IPFeed/ipfeed/ips.txt \
+  --web-user www-data
+```
+
 إذا أردت إعادة توليد ملف الإعداد:
 
 ```bash
@@ -158,6 +168,8 @@ sudo chmod 644 /var/www/IPFeed/ipfeed/ips.txt
 - `/var/lib/ipfeed/ip_feed.sqlite`
 - `/var/lib/ipfeed/logs/`
 - `/var/lib/ipfeed/backups/`
+
+ابتداءً من `v0.1.2` لا يحتاج مجلد `/var/www/IPFeed/ipfeed` نفسه أن يكون قابلًا للكتابة. الأفضل أن يبقى `755`، ويكون الملف `ips.txt` فقط قابلًا للكتابة.
 
 ## SQLite و migrations
 
@@ -272,6 +284,27 @@ curl -H 'X-IPFeed-Health-Token: change-this-long-random-token' \
   https://example.com/ipfeed/index.php?healthcheck=1
 ```
 
+## تشخيص الأعطال
+
+أول أمر تشغله عند ظهور 500 أو مشكلة صلاحيات:
+
+```bash
+cd /var/www/IPFeed
+sudo ./doctor.sh --project-dir /var/www/IPFeed --private-dir /var/lib/ipfeed --web-user www-data
+```
+
+أمثلة إصلاحات شائعة:
+
+```bash
+sudo apt install -y php-sqlite3 sqlite3 python3
+sudo phpenmod pdo_sqlite sqlite3 || true
+sudo chown -R www-data:www-data /var/lib/ipfeed
+sudo chown www-data:www-data /var/www/IPFeed/ipfeed/ips.txt
+sudo chmod 755 /var/www/IPFeed/ipfeed
+sudo chmod 644 /var/www/IPFeed/ipfeed/ips.txt
+sudo systemctl restart apache2
+```
+
 ## GitHub Release بدل ملفات التشغيل
 
 قبل إنشاء release:
@@ -280,6 +313,14 @@ curl -H 'X-IPFeed-Health-Token: change-this-long-random-token' \
 git status -sb
 git diff --check
 ```
+
+كل push على `main` يشغل GitHub Actions لفحص:
+
+- PHP syntax وامتدادات SQLite.
+- Python scripts.
+- `install.sh` و `doctor.sh`.
+- Docker build.
+- عدم رجوع ملفات التشغيل الحقيقية إلى Git.
 
 تأكد أن هذه الملفات غير موجودة في Git:
 

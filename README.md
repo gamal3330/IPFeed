@@ -13,6 +13,8 @@ IP Feed Manager is a PHP dashboard for maintaining an IPv4 blocklist feed for Fo
 - JSONL operational logs for web/runtime, VirusTotal worker, and backups.
 - Automated SQLite and `ips.txt` backups with retention cleanup.
 - Backup and restore from CLI, plus admin UI backup/restore controls.
+- `doctor.sh` server diagnostics for PHP extensions, SQLite, paths, permissions, and Apache symlink checks.
+- GitHub Actions CI for PHP syntax, Python scripts, installer/doctor checks, Docker build, and runtime-file guardrails.
 - Public monitoring health check endpoint with optional token protection.
 - Bulk IP management, categories, expiration dates, advanced filtering, and responsive RTL pages.
 
@@ -59,6 +61,7 @@ Only `ipfeed/` should be served by the web server. Keep `/var/lib/ipfeed` and th
 ├── Dockerfile
 ├── docker-compose.yml
 ├── install.sh
+├── doctor.sh
 ├── composer.json
 └── DEPLOYMENT.md
 ```
@@ -90,6 +93,18 @@ sudo ./install.sh \
 ```
 
 The installer creates the private runtime directory, generates `config.php`, creates an empty `ips.txt`, runs migrations, and fixes basic permissions.
+
+Run the diagnostics script after install or after any server move:
+
+```bash
+sudo ./doctor.sh \
+  --project-dir /var/www/IPFeed \
+  --private-dir /var/lib/ipfeed \
+  --feed-file /var/www/IPFeed/ipfeed/ips.txt \
+  --web-user www-data
+```
+
+After `v0.1.2`, the public `ipfeed/` directory does not need to be writable. Only `ipfeed/ips.txt` should be writable by the web server user.
 
 Set these variables in your web server/PHP-FPM/systemd environment:
 

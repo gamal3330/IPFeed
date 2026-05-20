@@ -13,3 +13,10 @@
 - Added `config.example.php` and `ips.txt.example` templates.
 - Documented the recommended `/var/lib/ipfeed` private runtime layout.
 - Updated systemd and cron examples for private runtime paths.
+
+## v0.1.2 - Operational Hardening
+
+- Added `doctor.sh` for server diagnostics.
+- Relaxed feed storage checks so the public `ipfeed/` directory no longer needs write permission when `ips.txt` already exists and is writable.
+- Added GitHub Actions CI for PHP/Python/shell checks, installer diagnostics, Docker build, and runtime-file guardrails.
+- Documented the safer permission model: writable `ips.txt`, non-writable public web directory.

@@ -437,12 +437,12 @@ function storageError(string $ipsFile, string $logFile): string
         return 'المجلد غير موجود: ' . $baseDir;
     }
 
-    if (!is_writable($baseDir)) {
-        return 'المجلد غير قابل للكتابة: ' . $baseDir;
-    }
-
     if (file_exists($ipsFile) && !is_writable($ipsFile)) {
         return 'ملف ips.txt غير قابل للكتابة: ' . $ipsFile;
+    }
+
+    if (!file_exists($ipsFile) && !is_writable($baseDir)) {
+        return 'ملف ips.txt غير موجود ولا يمكن إنشاؤه لأن المجلد غير قابل للكتابة: ' . $baseDir;
     }
 
     if (isSqliteStorage($logFile)) {
