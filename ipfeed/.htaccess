@@ -1,0 +1,11 @@
+Options -Indexes
+
+<FilesMatch "\.(json|db|sqlite|log)$">
+    Require all denied
+    Deny from all
+</FilesMatch>
+
+<Files "ips.txt">
+    Require all granted
+    Allow from all
+</Files>
