@@ -1,0 +1,16 @@
+services:
+  ipfeed:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      IP_FEED_SETTINGS_DIR: /var/lib/ipfeed
+      IP_FEED_CONFIG_FILE: /var/lib/ipfeed/config.php
+      IP_FEED_FEED_FILE: /var/lib/ipfeed/ips.txt
+      IP_FEED_HEALTH_TOKEN: change-this-token
+    volumes:
+      - ipfeed-data:/var/lib/ipfeed
+    restart: unless-stopped
+
+volumes:
+  ipfeed-data:

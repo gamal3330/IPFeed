@@ -11,8 +11,8 @@ if (!defined('IP_FEED_APP')) {
  | IP Feed Manager - Professional RTL Dashboard
  |--------------------------------------------------------------------------
  | ضع هذا الملف باسم index.php داخل مجلد الويب، واترك ips.txt فقط مكشوفاً
- | حتى يعمل رابط FortiGate Feed بالشكل المعتاد. تحفظ ملفات JSON الحساسة
- | في مجلد الإعدادات الخاصة خارج ipfeed قدر الإمكان.
+ | حتى يعمل رابط FortiGate Feed بالشكل المعتاد. تحفظ SQLite والسجلات
+ | والنسخ الاحتياطية في مجلد خاص خارج ipfeed قدر الإمكان.
  */
 
 $webRoot = isset($webRoot) && is_string($webRoot) ? $webRoot : dirname(__DIR__, 2);

@@ -1,0 +1,41 @@
+server {
+    listen 80;
+    server_name ipfeed.example.com;
+
+    root /var/www/IPFeed;
+    index index.php;
+
+    # Public FortiGate feed. This is the only plain data file that should be public.
+    location = /ipfeed/ips.txt {
+        default_type text/plain;
+        try_files /ipfeed/ips.txt =404;
+    }
+
+    location ^~ /ipfeed/app/ {
+        deny all;
+        return 403;
+    }
+
+    location ^~ /ip-feed-manager-private/ {
+        deny all;
+        return 403;
+    }
+
+    location /ipfeed/ {
+        try_files $uri $uri/ /ipfeed/index.php?$query_string;
+    }
+
+    location ~ ^/ipfeed/(.+\.php)$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param IP_FEED_PROJECT_DIR /var/www/IPFeed;
+        fastcgi_param IP_FEED_SETTINGS_DIR /var/lib/ipfeed;
+        fastcgi_param IP_FEED_CONFIG_FILE /var/lib/ipfeed/config.php;
+        fastcgi_param IP_FEED_FEED_FILE /var/www/IPFeed/ipfeed/ips.txt;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}

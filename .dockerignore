@@ -1,8 +1,9 @@
+.git/
 vendor/
 __pycache__/
 *.pyc
+*.log
 
-# Runtime artifacts created on the server. Keep them out of GitHub releases.
 ipfeed/ips.txt
 ip-feed-manager-private/config.php
 ip-feed-manager-private/*.sqlite
@@ -16,4 +17,3 @@ ip-feed-manager-private/vt_rate_limit.json
 ip-feed-manager-private/login_attempts.json
 ip-feed-manager-private/logs/
 ip-feed-manager-private/backups/
-*.log

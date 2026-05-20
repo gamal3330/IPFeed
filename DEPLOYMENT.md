@@ -1,77 +1,172 @@
 # IP Feed Manager - دليل النشر والتحديث
 
+## الفكرة الأساسية
+
+لا تنشر ملفات التشغيل الحقيقية على GitHub. المستودع يجب أن يحتوي الكود، القوالب، migrations، وأمثلة التشغيل فقط.
+
+ملفات التشغيل التي يجب أن تبقى على السيرفر:
+
+- `config.php`
+- `ip_feed.sqlite`
+- `ips.txt`
+- ملفات JSON القديمة إن وجدت قبل الترحيل
+- `logs/`
+- `backups/`
+
+التخطيط المقترح:
+
+```text
+/var/www/IPFeed/                 نسخة الكود من GitHub release
+/var/www/IPFeed/ipfeed/          المجلد المكشوف للويب
+/var/www/IPFeed/ipfeed/ips.txt   الملف الوحيد المكشوف لـ FortiGate
+/var/lib/ipfeed/                 مجلد التشغيل الخاص خارج web root
+/var/lib/ipfeed/config.php       إعدادات الإنتاج
+/var/lib/ipfeed/ip_feed.sqlite   قاعدة SQLite
+/var/lib/ipfeed/logs/            السجلات
+/var/lib/ipfeed/backups/         النسخ الاحتياطية
+```
+
 ## المتطلبات
 
 - PHP 8.1 أو أحدث.
 - امتداد `pdo_sqlite`.
-- Composer لتوليد autoload في بيئة الإنتاج. يوجد fallback داخلي إذا لم يتوفر Composer مؤقتا.
-- صلاحية كتابة لمجلد الإعدادات الخاصة وملف `ipfeed/ips.txt`.
-- خادم ويب يدعم PHP مثل Apache أو Nginx مع PHP-FPM.
-- Python 3 لتشغيل migrations والنسخ الاحتياطي.
-- systemd مفضل للتشغيل المستقر، ويمكن استخدام cron كبديل.
+- Python 3.
+- Apache أو Nginx مع PHP-FPM.
+- Composer مفضل للإنتاج، ويوجد fallback autoload إذا لم يتوفر مؤقتا.
+- systemd مفضل للـ worker والنسخ الاحتياطي، ويمكن استخدام cron كبديل.
 
-## هيكل الملفات
+## التثبيت عبر install.sh
 
-- `ipfeed/` هو مجلد الويب.
-- `ipfeed/ips.txt` هو الملف الوحيد الذي يجب أن يكون مكشوفا لـ FortiGate.
-- `ipfeed/index.php` هو لوحة الإدارة.
-- `ipfeed/app/bootstrap.php` يقوم بتحميل Composer autoload أو fallback داخلي.
-- `ipfeed/app/src/` يحتوي طبقات `Controllers`, `Services`, `Repositories`, و `Config`.
-- `ip-feed-manager-private/` يحتوي الإعدادات وقاعدة SQLite والملفات الحساسة.
-- `ip-feed-manager-private/migrations/` يحتوي migrations منظمة لقاعدة SQLite.
-- `ip-feed-manager-private/logs/` يحتوي سجلات التشغيل.
-- `ip-feed-manager-private/backups/` يحتوي نسخ SQLite و `ips.txt`.
-- `ops/systemd/` يحتوي قوالب الخدمات والمؤقتات.
-- `ops/cron/` يحتوي مثال cron بديل.
-
-يفضل نقل `ip-feed-manager-private/` خارج مجلد الويب. إذا تعذر ذلك، تأكد أن ملف `.htaccess` يمنع الوصول المباشر.
-
-## الإعداد
-
-يمكن ضبط مسار الإعدادات عبر:
+بعد تنزيل GitHub release أو عمل clone:
 
 ```bash
-IP_FEED_SETTINGS_DIR=/path/to/ip-feed-manager-private
+cd /var/www/IPFeed
+sudo ./install.sh \
+  --project-dir /var/www/IPFeed \
+  --private-dir /var/lib/ipfeed \
+  --feed-file /var/www/IPFeed/ipfeed/ips.txt \
+  --web-user www-data
 ```
 
-أو ضبط ملف إعداد مباشر:
+السكربت يقوم بـ:
+
+- إنشاء `/var/lib/ipfeed`.
+- إنشاء `logs/` و `backups/`.
+- إنشاء `config.php` داخل المجلد الخاص.
+- إنشاء `ipfeed/ips.txt` فارغ.
+- تشغيل migrations على SQLite.
+- ضبط صلاحيات أساسية.
+
+إذا أردت إعادة توليد ملف الإعداد:
 
 ```bash
-IP_FEED_CONFIG_FILE=/path/to/config.php
+sudo ./install.sh --private-dir /var/lib/ipfeed --force-config
 ```
 
-ملف الإعداد الرئيسي:
+## متغيرات البيئة المهمة
+
+استخدمها في Nginx/Apache/PHP-FPM/systemd:
+
+```bash
+IP_FEED_PROJECT_DIR=/var/www/IPFeed
+IP_FEED_SETTINGS_DIR=/var/lib/ipfeed
+IP_FEED_CONFIG_FILE=/var/lib/ipfeed/config.php
+IP_FEED_FEED_FILE=/var/www/IPFeed/ipfeed/ips.txt
+IP_FEED_HEALTH_TOKEN=change-this-long-random-token
+```
+
+## Apache
+
+يوجد مثال جاهز:
 
 ```text
-ip-feed-manager-private/config.php
+ops/apache/ipfeed.conf.example
 ```
+
+تثبيت نموذجي:
+
+```bash
+sudo cp ops/apache/ipfeed.conf.example /etc/apache2/sites-available/ipfeed.conf
+sudo nano /etc/apache2/sites-available/ipfeed.conf
+sudo a2enmod proxy_fcgi setenvif rewrite headers
+sudo a2ensite ipfeed.conf
+sudo apache2ctl configtest
+sudo systemctl reload apache2
+```
+
+عدّل مسار PHP-FPM socket حسب إصدار PHP لديك، مثل `php8.2-fpm.sock` أو `php8.3-fpm.sock`.
+
+## Nginx
+
+يوجد مثال جاهز:
+
+```text
+ops/nginx/ipfeed.conf.example
+```
+
+تثبيت نموذجي:
+
+```bash
+sudo cp ops/nginx/ipfeed.conf.example /etc/nginx/sites-available/ipfeed
+sudo nano /etc/nginx/sites-available/ipfeed
+sudo ln -s /etc/nginx/sites-available/ipfeed /etc/nginx/sites-enabled/ipfeed
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+تأكد من تعديل:
+
+- `server_name`
+- مسار `/var/www/IPFeed`
+- مسار `/var/lib/ipfeed`
+- PHP-FPM socket
+
+## Docker
+
+للتجربة السريعة:
+
+```bash
+docker compose up -d --build
+```
+
+ثم افتح:
+
+```text
+http://localhost:8080/
+```
+
+Docker يستخدم volume باسم `ipfeed-data` ويحفظ داخله:
+
+- SQLite
+- `config.php`
+- `ips.txt`
+- logs
+- backups
 
 ## الصلاحيات المقترحة
 
 ```bash
-chmod 755 ipfeed
-chmod 644 ipfeed/index.php ipfeed/ips.txt
-chmod 750 ipfeed/app
-chmod 750 ip-feed-manager-private
-chmod 640 ip-feed-manager-private/config.php
-chmod 640 ip-feed-manager-private/ip_feed.sqlite
-mkdir -p ip-feed-manager-private/logs ip-feed-manager-private/backups
-chmod 750 ip-feed-manager-private/logs ip-feed-manager-private/backups
+sudo chown -R www-data:www-data /var/lib/ipfeed /var/www/IPFeed/ipfeed/ips.txt
+sudo chmod 750 /var/lib/ipfeed /var/lib/ipfeed/logs /var/lib/ipfeed/backups
+sudo chmod 640 /var/lib/ipfeed/config.php /var/lib/ipfeed/ip_feed.sqlite
+sudo chmod 644 /var/www/IPFeed/ipfeed/ips.txt
 ```
 
-يجب أن يكون مستخدم خادم الويب قادرا على الكتابة في:
+يجب أن يستطيع مستخدم الويب الكتابة في:
 
-- `ipfeed/ips.txt`
-- `ip-feed-manager-private/ip_feed.sqlite`
-- `ip-feed-manager-private/logs/`
-- `ip-feed-manager-private/backups/`
+- `/var/www/IPFeed/ipfeed/ips.txt`
+- `/var/lib/ipfeed/ip_feed.sqlite`
+- `/var/lib/ipfeed/logs/`
+- `/var/lib/ipfeed/backups/`
 
-## الترحيل إلى SQLite
+## SQLite و migrations
 
-لتطبيق migrations المنظمة:
+تشغيل migrations يدويا:
 
 ```bash
-python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite
+python3 ip-feed-manager-private/run_migrations.py \
+  --database /var/lib/ipfeed/ip_feed.sqlite \
+  --migrations-dir ip-feed-manager-private/migrations
 ```
 
 أسماء migrations الحالية:
@@ -82,41 +177,29 @@ ip-feed-manager-private/migrations/002_vt_queue.sql
 ip-feed-manager-private/migrations/003_ip_metadata.sql
 ```
 
-يحفظ النظام رقم النسخة في جدول `schema_version`.
-
-عند وجود ملفات JSON قديمة، شغل:
+التحقق:
 
 ```bash
-python3 ip-feed-manager-private/migrate_json_to_sqlite.py --storage-dir ip-feed-manager-private
+sqlite3 /var/lib/ipfeed/ip_feed.sqlite 'pragma integrity_check;'
+sqlite3 /var/lib/ipfeed/ip_feed.sqlite 'select * from schema_version;'
 ```
 
-بعد هذه المرحلة تصبح إعدادات VirusTotal وحدود الطلبات ومحاولات الدخول داخل جدول `app_state` في SQLite. تبقى ملفات JSON القديمة كأثر ترحيل فقط، وليست التخزين النشط.
-
-للتحقق من قاعدة البيانات:
+إذا كانت لديك ملفات JSON قديمة على السيرفر:
 
 ```bash
-sqlite3 ip-feed-manager-private/ip_feed.sqlite 'pragma integrity_check;'
+python3 ip-feed-manager-private/migrate_json_to_sqlite.py --storage-dir /var/lib/ipfeed
 ```
 
-## VirusTotal Queue
+بعد الترحيل تصبح إعدادات VirusTotal وحدود الطلبات ومحاولات الدخول داخل جدول `app_state`.
 
-الواجهة تعالج الطابور تدريجيا إذا كانت الصفحة مفتوحة. للتشغيل المستقر بالخلفية، استخدم systemd timer.
+## VirusTotal Worker
 
-1. انسخ ملف البيئة وعدل المسار:
+1. انسخ ملف البيئة:
 
 ```bash
 sudo mkdir -p /etc/ipfeed
 sudo cp ops/systemd/ipfeed.env.example /etc/ipfeed/ipfeed.env
 sudo nano /etc/ipfeed/ipfeed.env
-```
-
-تأكد أن:
-
-```bash
-IP_FEED_PROJECT_DIR=/var/www/IPFeed
-IP_FEED_CONFIG_FILE=/var/www/IPFeed/ip-feed-manager-private/config.php
-IP_FEED_VT_LIMIT=1
-IP_FEED_VT_SLEEP=2
 ```
 
 2. فعّل worker:
@@ -129,39 +212,35 @@ sudo systemctl enable --now ipfeed-vt-worker.timer
 sudo systemctl status ipfeed-vt-worker.timer
 ```
 
-بديل cron عند عدم استخدام systemd:
+بديل cron موجود في:
 
-```cron
-* * * * * cd /var/www/IPFeed && /usr/bin/php ip-feed-manager-private/vt_worker.php --limit=1 --sleep=2 >> ip-feed-manager-private/logs/vt_worker.cron.log 2>&1
+```text
+ops/cron/ipfeed.cron.example
 ```
 
-يمكن رفع `--limit` عند وجود اشتراك VirusTotal يسمح بعدد أكبر من الطلبات.
-
-## سجلات التشغيل
-
-السجلات الافتراضية:
-
-- `ip-feed-manager-private/logs/app.log`
-- `ip-feed-manager-private/logs/vt_worker.log`
-- `ip-feed-manager-private/logs/backup.log`
-
-كل سطر JSON مستقل، مما يسهل قراءته أو إرساله لأي نظام مراقبة.
-
-## النسخ الاحتياطي
+## النسخ الاحتياطي والاستعادة
 
 تشغيل نسخة يدوية:
 
 ```bash
+IP_FEED_DATABASE=/var/lib/ipfeed/ip_feed.sqlite \
+IP_FEED_FEED_FILE=/var/www/IPFeed/ipfeed/ips.txt \
+IP_FEED_BACKUP_DIR=/var/lib/ipfeed/backups \
+IP_FEED_BACKUP_LOG=/var/lib/ipfeed/logs/backup.log \
 python3 ip-feed-manager-private/backup.py --retention-days=14
 ```
 
-استعادة نسخة من manifest:
+استعادة نسخة:
 
 ```bash
+IP_FEED_DATABASE=/var/lib/ipfeed/ip_feed.sqlite \
+IP_FEED_FEED_FILE=/var/www/IPFeed/ipfeed/ips.txt \
+IP_FEED_BACKUP_DIR=/var/lib/ipfeed/backups \
+IP_FEED_BACKUP_LOG=/var/lib/ipfeed/logs/backup.log \
 python3 ip-feed-manager-private/backup.py restore --manifest backup_YYYYMMDD_HHMMSS.json
 ```
 
-يمكن أيضًا إنشاء واستعادة النسخ من صفحة `Settings` داخل الواجهة. عند الاستعادة ينشئ النظام نسخة `pre_restore` تلقائيًا قبل استبدال SQLite و `ips.txt`.
+يمكن أيضا إنشاء واستعادة النسخ من صفحة `Settings`. عند الاستعادة ينشئ النظام نسخة `pre_restore` تلقائيا.
 
 تفعيل النسخ اليومي عبر systemd:
 
@@ -170,19 +249,6 @@ sudo cp ops/systemd/ipfeed-backup.service /etc/systemd/system/
 sudo cp ops/systemd/ipfeed-backup.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now ipfeed-backup.timer
-sudo systemctl status ipfeed-backup.timer
-```
-
-النسخ تحفظ:
-
-- نسخة SQLite سليمة بعد `PRAGMA integrity_check`.
-- نسخة من `ipfeed/ips.txt`.
-- ملف manifest يحتوي الحجم و SHA256.
-
-لجدولة cron بديلة:
-
-```cron
-30 2 * * * cd /var/www/IPFeed && /usr/bin/python3 ip-feed-manager-private/backup.py --retention-days=14 >> ip-feed-manager-private/logs/backup.cron.log 2>&1
 ```
 
 ## صفحة صحة النظام
@@ -190,59 +256,76 @@ sudo systemctl status ipfeed-backup.timer
 بعد تسجيل الدخول افتح:
 
 ```text
-ipfeed/index.php?page=health
+/ipfeed/index.php?page=health
 ```
 
-تتحقق الصفحة من:
-
-- صلاحيات `ips.txt`.
-- صلاحيات مجلد الإعدادات الخاصة.
-- حماية `.htaccess`.
-- اتصال SQLite وسلامة `integrity_check`.
-- رقم `schema_version`.
-- جدول `app_state` لحالات التشغيل الموحدة.
-- حالة مفتاح VirusTotal والطابور.
-- حالة سجلات التشغيل.
-- آخر نسخة احتياطية.
-
-للمراقبة الخارجية استخدم:
+للمراقبة الخارجية:
 
 ```text
-https://example.com/ipfeed/index.php?healthcheck=1
+/ipfeed/index.php?healthcheck=1
 ```
 
-لحماية الرابط أضف token في `config.php` أو كمتغير بيئة:
+مع token:
 
 ```bash
-IP_FEED_HEALTH_TOKEN=change-this-long-random-token
+curl -H 'X-IPFeed-Health-Token: change-this-long-random-token' \
+  https://example.com/ipfeed/index.php?healthcheck=1
 ```
 
-ثم أرسل الطلب بهذا الشكل:
+## GitHub Release بدل ملفات التشغيل
+
+قبل إنشاء release:
 
 ```bash
-curl -H 'X-IPFeed-Health-Token: change-this-long-random-token' https://example.com/ipfeed/index.php?healthcheck=1
+git status -sb
+git diff --check
 ```
 
-يرجع الرابط HTTP 200 عند `ok` أو `warning`، و HTTP 503 عند وجود `error`. إذا أردت اعتبار التحذيرات فشلًا، اجعل `healthcheck.fail_on_warning` بقيمة `true`.
+تأكد أن هذه الملفات غير موجودة في Git:
+
+```text
+ip-feed-manager-private/config.php
+ip-feed-manager-private/ip_feed.sqlite
+ip-feed-manager-private/*.json
+ip-feed-manager-private/logs/
+ip-feed-manager-private/backups/
+ipfeed/ips.txt
+```
+
+إنشاء release:
+
+```bash
+git tag -a vX.Y.Z -m "IPFeed vX.Y.Z"
+git push origin vX.Y.Z
+gh release create vX.Y.Z --title "IPFeed vX.Y.Z" --notes-file RELEASE_NOTES.md
+```
+
+على السيرفر، حدّث من release وليس من مجلد تشغيل حي:
+
+```bash
+cd /var/www/IPFeed
+git fetch --tags
+git checkout vX.Y.Z
+sudo ./install.sh --project-dir /var/www/IPFeed --private-dir /var/lib/ipfeed --web-user www-data
+```
 
 ## التحديث
 
 قبل أي تحديث:
 
-1. انسخ `ip-feed-manager-private/` احتياطيا.
-2. انسخ `ipfeed/ips.txt` احتياطيا.
-3. استبدل ملفات التطبيق.
-4. شغل `composer install --no-dev --optimize-autoloader` إذا كان Composer متاحا.
-5. شغل `python3 ip-feed-manager-private/run_migrations.py --database ip-feed-manager-private/ip_feed.sqlite`.
-6. شغل سكربت ترحيل JSON عند الحاجة لنقل أي بقايا إلى SQLite.
-7. شغل `python3 ip-feed-manager-private/backup.py --retention-days=14` للتأكد أن النسخ الاحتياطي يعمل.
-8. افتح صفحة صحة النظام وتأكد من عدم وجود أخطاء.
-9. تأكد أن systemd timers تعمل:
-
-```bash
-systemctl list-timers 'ipfeed-*'
-```
+1. أنشئ backup من الواجهة أو CLI.
+2. نزّل GitHub release الجديد.
+3. لا تستبدل `/var/lib/ipfeed`.
+4. شغل `./install.sh` بنفس المسارات.
+5. شغل migrations إن لم يشغلها install.
+6. افتح صفحة Health وتأكد أن SQLite و `ips.txt` والنسخ الاحتياطي سليمة.
 
 ## FortiGate
 
-استخدم رابط `ips.txt` فقط كمصدر External Block List. لا تستخدم رابط لوحة الإدارة كمصدر للقائمة.
+استخدم رابط `ips.txt` فقط كمصدر External Block List:
+
+```text
+https://example.com/ipfeed/ips.txt
+```
+
+لا تستخدم رابط لوحة الإدارة كمصدر للقائمة.
