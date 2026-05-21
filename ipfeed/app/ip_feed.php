@@ -466,6 +466,48 @@ function storageError(string $ipsFile, string $logFile): string
     return '';
 }
 
+function feedReadError(string $ipsFile): string
+{
+    $baseDir = dirname($ipsFile);
+
+    if (!is_dir($baseDir)) {
+        return 'مجلد ips.txt غير موجود: ' . $baseDir;
+    }
+
+    if (!file_exists($ipsFile)) {
+        return 'ملف ips.txt غير موجود: ' . $ipsFile;
+    }
+
+    if (!is_readable($ipsFile)) {
+        return 'ملف ips.txt غير قابل للقراءة: ' . $ipsFile;
+    }
+
+    return '';
+}
+
+function logWriteError(string $logFile): string
+{
+    if (isSqliteStorage($logFile)) {
+        return databaseStorageError($logFile);
+    }
+
+    $logDir = dirname($logFile);
+
+    if (!is_dir($logDir)) {
+        return 'مجلد السجل غير موجود: ' . $logDir;
+    }
+
+    if (!is_writable($logDir)) {
+        return 'مجلد السجل غير قابل للكتابة: ' . $logDir;
+    }
+
+    if (file_exists($logFile) && !is_writable($logFile)) {
+        return 'ملف السجل ips_log.json غير قابل للكتابة: ' . $logFile;
+    }
+
+    return '';
+}
+
 function countActions(array $log, string $action): int
 {
     $count = 0;

@@ -707,7 +707,10 @@ if ($requestMethod === 'POST') {
         }
     } elseif (isset($_POST['bulk_check_vt']) && isLoggedIn()) {
         $mode = (string) ($_POST['bulk_check_vt'] ?? 'selected');
-        $storageIssue = storageError($ipsFile, $logFile);
+        $storageIssue = feedReadError($ipsFile);
+        if ($storageIssue === '') {
+            $storageIssue = databaseStorageError($databaseFile);
+        }
 
         if (!canCheckVirusTotal($users)) {
             $error = 'حسابك لا يملك صلاحية فحص VirusTotal.';
@@ -827,7 +830,13 @@ if ($requestMethod === 'POST') {
 
     } elseif (isset($_POST['check_vt_ip']) && isLoggedIn()) {
         $checkIp = trim((string) $_POST['check_vt_ip']);
-        $storageIssue = storageError($ipsFile, $logFile);
+        $storageIssue = feedReadError($ipsFile);
+        if ($storageIssue === '') {
+            $storageIssue = databaseStorageError($databaseFile);
+        }
+        if ($storageIssue === '') {
+            $storageIssue = logWriteError($logFile);
+        }
 
         if (!canCheckVirusTotal($users)) {
             $error = 'حسابك لا يملك صلاحية فحص VirusTotal.';
