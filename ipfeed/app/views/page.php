@@ -1926,7 +1926,7 @@ if (!defined('IP_FEED_APP')) {
                     </div>
                 <?php endif; ?>
 
-                <p class="note">الفرز الحالي: <strong><?= e(ipSortLabel($ipSort)) ?></strong>. النتائج المعروضة بعد الفلاتر: <?= number_format($ipTotalRows) ?> من أصل <?= number_format(count($existingIps)) ?> IP في ips.txt. فحص VirusTotal الجماعي يضيف أول <?= number_format($bulkScanLimit) ?> IP فقط في الطلب الواحد كحماية من الازدحام.</p>
+                <p class="note">الفرز الحالي: <strong><?= e(ipSortLabel($ipSort)) ?></strong>. النتائج المعروضة بعد الفلاتر: <?= number_format($ipTotalRows) ?> من أصل <?= number_format(count($existingIps)) ?> IP في ips.txt. فحص VirusTotal الجماعي يضيف حتى <?= number_format($bulkQueueLimit) ?> IP إلى الطابور في الطلب الواحد، ثم يعالجها العامل تدريجياً حسب حدود API.</p>
 
                 <div class="table-wrap">
                     <table id="ipsTable">
@@ -2750,7 +2750,7 @@ if (!defined('IP_FEED_APP')) {
         }
 
         if (action === 'bulk_check_vt') {
-            return confirm('ستتم إضافة ' + targetText + ' إلى طابور VirusTotal، وقد يتم تطبيق حد أول ' + BULK_SCAN_LIMIT + ' IP في الطلب الواحد. هل تريد المتابعة؟');
+            return confirm('ستتم إضافة ' + targetText + ' إلى طابور VirusTotal. الحد الأعلى للإضافة في الطلب الواحد هو ' + BULK_QUEUE_LIMIT + ' IP، والمعالجة الفعلية تتم تدريجياً حسب حدود API. هل تريد المتابعة؟');
         }
 
         if (action === 'bulk_delete_ips') {
@@ -2775,7 +2775,7 @@ if (!defined('IP_FEED_APP')) {
     const ADD_PROGRESS_THRESHOLD = <?= (int) $addProgressThreshold ?>;
     const ADD_PROGRESS_CHUNK_SIZE = <?= (int) $addProgressChunkSize ?>;
     const TOTAL_IPS = <?= (int) $ipTotalRows ?>;
-    const BULK_SCAN_LIMIT = <?= (int) $bulkScanLimit ?>;
+    const BULK_QUEUE_LIMIT = <?= (int) $bulkQueueLimit ?>;
     const IP_SEARCH_ACTIVE = <?= count(array_filter($ipFilters, static fn ($value): bool => (string) $value !== '')) > 0 ? 'true' : 'false' ?>;
     const VT_QUEUE_ENABLED = <?= $currentPage === 'dashboard' && $vtApiKey !== '' && canCheckVirusTotal($users) ? 'true' : 'false' ?>;
     const VT_QUEUE_INITIAL_PENDING = <?= $currentPage === 'dashboard' && (((int) ($vtQueueStats['queued'] ?? 0)) + ((int) ($vtQueueStats['processing'] ?? 0))) > 0 ? 'true' : 'false' ?>;

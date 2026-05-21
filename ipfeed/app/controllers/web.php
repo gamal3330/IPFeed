@@ -66,7 +66,7 @@ $legacyLoginRateLimitFile = (string) appConfigValue($appConfig, 'legacy_json.log
 
 $maxLogRowsOnScreen = max(50, (int) appConfigValue($appConfig, 'ui.max_log_rows_on_screen', 300));
 $rowsPerPage = max(5, (int) appConfigValue($appConfig, 'ui.rows_per_page', 10));
-$bulkScanLimit = max(1, (int) appConfigValue($appConfig, 'virustotal.bulk_scan_limit', 2));
+$bulkQueueLimit = max(1, (int) appConfigValue($appConfig, 'virustotal.bulk_queue_limit', 1000));
 $vtPublicApiSafeMode = (bool) appConfigValue($appConfig, 'virustotal.public_api_safe_mode', true);
 $addProgressThreshold = max(1, (int) appConfigValue($appConfig, 'ui.add_progress_threshold', 20));
 $addProgressChunkSize = max(1, (int) appConfigValue($appConfig, 'ui.add_progress_chunk_size', 10));
@@ -737,10 +737,12 @@ if ($requestMethod === 'POST') {
                 $requestedCount = count($ipsToCheck);
                 $limited = false;
 
-                if ($requestedCount > $bulkScanLimit) {
-                    $ipsToCheck = array_slice($ipsToCheck, 0, $bulkScanLimit);
+                if ($requestedCount > $bulkQueueLimit) {
+                    $ipsToCheck = array_slice($ipsToCheck, 0, $bulkQueueLimit);
                     $limited = true;
                 }
+
+                $queuedRequestCount = count($ipsToCheck);
 
                 $queueResult = enqueueVirusTotalScans(
                     $databaseFile,
@@ -753,9 +755,9 @@ if ($requestMethod === 'POST') {
                 );
 
                 if ($limited) {
-                    $message = 'تمت إضافة أول ' . $bulkScanLimit . ' IP إلى طابور VirusTotal من أصل ' . $requestedCount . ' مستهدف' . ($selectAllIps ? ' ضمن ' . $filteredCount . ' نتيجة مفلترة' : '') . '.';
+                    $message = 'تمت إضافة أول ' . number_format($queuedRequestCount) . ' IP إلى طابور VirusTotal من أصل ' . number_format($requestedCount) . ' مستهدف' . ($selectAllIps ? ' ضمن ' . number_format($filteredCount) . ' نتيجة مفلترة' : '') . '.';
                 } else {
-                    $message = 'تمت إضافة طلبات الفحص إلى طابور VirusTotal.';
+                    $message = 'تمت إضافة ' . number_format($queuedRequestCount) . ' IP إلى طابور VirusTotal للمعالجة التدريجية.';
                 }
 
                 $message .= ' جديد: ' . number_format((int) ($queueResult['queued'] ?? 0));

@@ -168,7 +168,7 @@ return [
     ],
 
     'virustotal' => [
-        'bulk_scan_limit' => 2,
+        'bulk_queue_limit' => 1000,
         'public_api_safe_mode' => true,
         'requests_per_minute' => 4,
         'min_interval_seconds' => 16,
