@@ -1456,6 +1456,7 @@ if (!defined('IP_FEED_APP')) {
         $currentPageTitle = appPageLabel($currentPage);
         $currentPageSubtitle = match ($currentPage) {
             'ips' => 'إضافة العناوين، فلترة القائمة، والإجراءات الجماعية.',
+            'review' => 'مراجعة العناوين المرشحة للحذف قبل إزالة أي شيء من ips.txt.',
             'logs' => 'سجل العمليات ومحاولات الدخول في صفحة مستقلة.',
             'users' => 'إدارة الحسابات والصلاحيات.',
             'settings' => 'إعدادات التكامل والتشغيل.',
@@ -1465,6 +1466,7 @@ if (!defined('IP_FEED_APP')) {
         $navItems = [
             ['page' => 'dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
             ['page' => 'ips', 'icon' => 'ips', 'label' => 'IPs'],
+            ['page' => 'review', 'icon' => 'warning', 'label' => 'Review'],
             ['page' => 'logs', 'icon' => 'logs', 'label' => 'Logs'],
         ];
         if (canManageUsers($users)) {
@@ -1539,7 +1541,7 @@ if (!defined('IP_FEED_APP')) {
             <div class="card stat-card span-3">
                 <div class="stat-label">حظر منتهي</div>
                 <div class="stat-value"><?= number_format($expiredIpCount) ?></div>
-                <div class="stat-helper">عناوين تحتاج مراجعة أو حذف</div>
+                <div class="stat-helper"><a href="?page=review&review_mode=expired">عناوين تحتاج مراجعة أو حذف</a></div>
             </div>
 
             <div class="card stat-card span-3">
@@ -2030,6 +2032,150 @@ if (!defined('IP_FEED_APP')) {
                             <a class="page-link <?= $p === $ipPage ? 'active' : '' ?>" href="<?= e(pageUrl('ip_page', $p)) ?>"><?= $p ?></a>
                         <?php endfor; ?>
                         <a class="page-link <?= $ipPage >= $ipTotalPages ? 'disabled' : '' ?>" href="<?= e(pageUrl('ip_page', $ipPage + 1)) ?>">التالي</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <?php endif; ?>
+
+        <?php if ($currentPage === 'review'): ?>
+        <section class="grid" aria-label="مراجعة IPs قبل الحذف">
+            <div class="card stat-card span-3">
+                <div class="stat-label">كل المرشحين</div>
+                <div class="stat-value"><?= number_format((int) ($reviewCounts['all'] ?? 0)) ?></div>
+                <div class="stat-helper">حسب قواعد المراجعة الحالية</div>
+            </div>
+            <div class="card stat-card span-3">
+                <div class="stat-label">منتهي</div>
+                <div class="stat-value"><?= number_format((int) ($reviewCounts['expired'] ?? 0)) ?></div>
+                <div class="stat-helper">تاريخ انتهاء الحظر مضى</div>
+            </div>
+            <div class="card stat-card span-3">
+                <div class="stat-label">نظيف</div>
+                <div class="stat-value"><?= number_format((int) ($reviewCounts['clean'] ?? 0)) ?></div>
+                <div class="stat-helper">VT نظيف منذ 7 أيام أو أكثر</div>
+            </div>
+            <div class="card stat-card span-3">
+                <div class="stat-label">قديم/غير مفحوص</div>
+                <div class="stat-value"><?= number_format(((int) ($reviewCounts['unscanned'] ?? 0)) + ((int) ($reviewCounts['old'] ?? 0))) ?></div>
+                <div class="stat-helper">مرشح للمراجعة اليدوية</div>
+            </div>
+
+            <div class="card span-12">
+                <div class="toolbar">
+                    <div class="card-head" style="margin-bottom: 0;">
+                        <div>
+                            <h2>مراجعة قبل الحذف</h2>
+                            <p>هذه الصفحة لا تحذف تلقائياً؛ تعرض فقط عناوين لها سبب واضح للمراجعة ثم تترك قرار الحذف لك.</p>
+                        </div>
+                    </div>
+                    <div class="pagination-links">
+                        <?php foreach (['all', 'expired', 'clean', 'unscanned', 'old'] as $modeValue): ?>
+                            <a class="page-link <?= $reviewMode === $modeValue ? 'active' : '' ?>" href="?page=review&review_mode=<?= e($modeValue) ?>">
+                                <?= e(ipReviewModeLabel($modeValue)) ?> · <?= number_format((int) ($reviewCounts[$modeValue] ?? 0)) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <form id="reviewBulkForm" method="post" onsubmit="return confirmBulkAction(event);">
+                    <?= csrfField() ?>
+                    <input type="hidden" id="reviewExportFormat" name="export_format" value="txt">
+                </form>
+
+                <div class="bulk-actions">
+                    <div class="bulk-left">
+                        <label class="select-all-label" for="selectAllIps">
+                            <input id="selectAllIps" type="checkbox" onchange="toggleIpSelection(this)" <?= isLoggedIn() && $reviewTotalRows > 0 ? '' : 'disabled' ?>>
+                            تحديد الصفحة الحالية
+                        </label>
+                        <span class="selected-count">المحدد: <span id="selectedIpCount">0</span></span>
+                    </div>
+                    <div class="bulk-right">
+                        <button class="btn btn-secondary" type="submit" name="bulk_export_ips" value="selected" form="reviewBulkForm" onclick="document.getElementById('reviewExportFormat').value='csv'" <?= $reviewTotalRows === 0 ? 'disabled' : '' ?>><?= iconSvg('download') ?> CSV</button>
+                        <button class="btn btn-secondary" type="submit" name="bulk_export_ips" value="selected" form="reviewBulkForm" onclick="document.getElementById('reviewExportFormat').value='txt'" <?= $reviewTotalRows === 0 ? 'disabled' : '' ?>><?= iconSvg('download') ?> TXT</button>
+                        <button class="btn btn-danger" type="submit" name="bulk_delete_ips" value="selected" form="reviewBulkForm" <?= $reviewTotalRows === 0 || !canModifyIps($users) ? 'disabled' : '' ?>><?= iconSvg('trash') ?> حذف المحدد</button>
+                    </div>
+                </div>
+
+                <p class="note">الفلتر الحالي: <strong><?= e(ipReviewModeLabel($reviewMode)) ?></strong>. النتائج المعروضة: <?= number_format($reviewTotalRows) ?> من أصل <?= number_format((int) ($reviewCounts['all'] ?? 0)) ?> مرشح.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>تحديد</th>
+                                <th>#</th>
+                                <th>IP</th>
+                                <th>سبب المراجعة</th>
+                                <th>التصنيف</th>
+                                <th>الانتهاء</th>
+                                <th>VirusTotal</th>
+                                <th>الدولة</th>
+                                <th>المستخدم/التاريخ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($pagedReviewRows)): ?>
+                                <tr>
+                                    <td colspan="9"><div class="empty-state">لا توجد عناوين مرشحة للمراجعة حسب هذا الفلتر.</div></td>
+                                </tr>
+                            <?php endif; ?>
+
+                            <?php foreach ($pagedReviewRows as $offset => $reviewRow): ?>
+                                <?php
+                                    $ip = (string) ($reviewRow['ip'] ?? '');
+                                    $vtRow = $reviewRow['vt_row'] ?? ($latestVtByIp[$ip] ?? null);
+                                    $category = (string) ($reviewRow['category'] ?? 'manual');
+                                    $expiresAt = (string) ($reviewRow['expires_at'] ?? '');
+                                ?>
+                                <tr>
+                                    <td><input class="ip-select" type="checkbox" name="selected_ips[]" value="<?= e($ip) ?>" form="reviewBulkForm" onchange="updateSelectedCount()" <?= isLoggedIn() ? '' : 'disabled' ?>></td>
+                                    <td><?= (($reviewPage - 1) * $rowsPerPage) + $offset + 1 ?></td>
+                                    <td class="ip"><span class="ip-chip"><?= e($ip) ?></span></td>
+                                    <td>
+                                        <span class="badge <?= e(ipReviewReasonBadgeClass((string) ($reviewRow['review_code'] ?? ''))) ?>"><?= e($reviewRow['review_label'] ?? 'مراجعة') ?></span>
+                                        <div class="small-meta"><?= e($reviewRow['review_detail'] ?? '') ?></div>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= e(ipCategoryBadgeClass($category)) ?>"><?= e(ipCategoryLabel($category)) ?></span>
+                                        <?php if (!empty($reviewRow['note'])): ?>
+                                            <div class="small-meta"><?= e($reviewRow['note']) ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><span class="badge <?= e(expirationBadgeClass($expiresAt)) ?>"><?= e(expirationLabel($expiresAt)) ?></span></td>
+                                    <td>
+                                        <?php if ($vtRow): ?>
+                                            <span class="badge <?= e(vtBadgeClass((string) ($vtRow['vt_status'] ?? ''))) ?>"><?= e($vtRow['vt_status'] ?? 'غير معروف') ?></span>
+                                            <div class="small-meta">Score: <?= e((string) ($vtRow['vt_malicious'] ?? 0)) ?> / <?= e((string) ($vtRow['vt_total'] ?? 0)) ?></div>
+                                        <?php else: ?>
+                                            <span class="badge badge-vt-muted">لم يتم الفحص</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= e($reviewRow['country'] ?? 'Unknown') ?></td>
+                                    <td>
+                                        <?= e($reviewRow['user'] ?? '-') ?>
+                                        <?php if (!empty($reviewRow['added_at'])): ?>
+                                            <div class="small-meta ip"><?= e($reviewRow['added_at']) ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination" aria-label="تقسيم صفحات المراجعة">
+                    <div class="pagination-info">
+                        عرض <?= $reviewTotalRows === 0 ? 0 : (($reviewPage - 1) * $rowsPerPage) + 1 ?> - <?= min($reviewPage * $rowsPerPage, $reviewTotalRows) ?> من <?= number_format($reviewTotalRows) ?> IP
+                    </div>
+                    <div class="pagination-links">
+                        <a class="page-link <?= $reviewPage <= 1 ? 'disabled' : '' ?>" href="<?= e(pageUrl('review_page', $reviewPage - 1)) ?>">السابق</a>
+                        <?php for ($p = max(1, $reviewPage - 2); $p <= min($reviewTotalPages, $reviewPage + 2); $p++): ?>
+                            <a class="page-link <?= $p === $reviewPage ? 'active' : '' ?>" href="<?= e(pageUrl('review_page', $p)) ?>"><?= $p ?></a>
+                        <?php endfor; ?>
+                        <a class="page-link <?= $reviewPage >= $reviewTotalPages ? 'disabled' : '' ?>" href="<?= e(pageUrl('review_page', $reviewPage + 1)) ?>">التالي</a>
                     </div>
                 </div>
             </div>
@@ -2591,12 +2737,13 @@ if (!defined('IP_FEED_APP')) {
         const allPages = document.getElementById('selectAllAllIps');
         const allPagesSelected = Boolean(allPages && allPages.checked);
         const selected = document.querySelectorAll('.ip-select:checked').length;
+        const allPagesOptionAvailable = Boolean(allPages);
         const targetText = (mode === 'all' || allPagesSelected)
             ? (IP_SEARCH_ACTIVE ? 'كل نتائج الفلاتر الحالية' : 'كل النتائج الحالية')
             : selected + ' IP';
 
         if (mode !== 'all' && !allPagesSelected && selected === 0) {
-            alert('اختر IP واحداً على الأقل، أو فعّل خيار تحديد كل النتائج المفلترة.');
+            alert(allPagesOptionAvailable ? 'اختر IP واحداً على الأقل، أو فعّل خيار تحديد كل النتائج المفلترة.' : 'اختر IP واحداً على الأقل.');
             return false;
         }
 

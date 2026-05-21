@@ -762,9 +762,12 @@ function buildIpAdminRows(array $ips, array $latestVtByIp, array $metadataByIp, 
             'added_at' => (string) ($context['time'] ?? ''),
             'vt_status' => (string) ($vt['vt_status'] ?? ''),
             'vt_malicious' => (int) ($vt['vt_malicious'] ?? 0),
+            'vt_suspicious' => (int) ($vt['vt_suspicious'] ?? 0),
             'vt_total' => (int) ($vt['vt_total'] ?? 0),
             'vt_asn' => (int) ($vt['vt_asn'] ?? 0),
             'vt_as_owner' => (string) ($vt['vt_as_owner'] ?? ''),
+            'vt_error' => (string) ($vt['vt_error'] ?? ''),
+            'vt_checked_at' => (string) ($vt['checked_at'] ?? ''),
             'vt_row' => $vt,
         ];
     }
@@ -876,6 +879,175 @@ function filterIpAdminRows(array $rows, array $filters): array
 
         return true;
     }));
+}
+
+function ipReviewMode(string $mode): string
+{
+    $mode = strtolower(trim($mode));
+    $allowed = ['all', 'expired', 'clean', 'unscanned', 'old'];
+
+    return in_array($mode, $allowed, true) ? $mode : 'all';
+}
+
+function ipReviewModeLabel(string $mode): string
+{
+    return match (ipReviewMode($mode)) {
+        'expired' => 'منتهي',
+        'clean' => 'نظيف',
+        'unscanned' => 'غير مفحوص',
+        'old' => 'قديم',
+        default => 'الكل',
+    };
+}
+
+function ipReviewReasonBadgeClass(string $code): string
+{
+    return match ($code) {
+        'expired' => 'badge-vt-danger',
+        'clean' => 'badge-vt-success',
+        'unscanned' => 'badge-vt-warning',
+        'old' => 'badge-vt-muted',
+        default => 'badge-check',
+    };
+}
+
+function ipReviewDaysSince(string $dateTime): ?int
+{
+    $dateTime = trim($dateTime);
+
+    if ($dateTime === '') {
+        return null;
+    }
+
+    $timestamp = strtotime($dateTime);
+
+    if ($timestamp === false) {
+        return null;
+    }
+
+    return max(0, (int) floor((time() - $timestamp) / 86400));
+}
+
+function ipReviewReasonForRow(array $row, int $cleanMinDays = 7, int $unscannedMinDays = 30, int $oldMinDays = 30): array
+{
+    $expiresAt = normalizeDateOnly((string) ($row['expires_at'] ?? ''));
+
+    if (expirationState($expiresAt) === 'expired') {
+        return [
+            'code' => 'expired',
+            'label' => 'حظر منتهي',
+            'detail' => 'انتهى بتاريخ ' . $expiresAt . ' ويمكن مراجعته للحذف.',
+            'priority' => 10,
+        ];
+    }
+
+    $status = trim((string) ($row['vt_status'] ?? ''));
+    $malicious = (int) ($row['vt_malicious'] ?? 0);
+    $suspicious = (int) ($row['vt_suspicious'] ?? 0);
+    $total = (int) ($row['vt_total'] ?? 0);
+    $checkedAt = trim((string) ($row['vt_checked_at'] ?? ''));
+    $addedAt = trim((string) (($row['added_at'] ?? '') ?: ($row['updated_at'] ?? '')));
+    $ageDays = ipReviewDaysSince($addedAt);
+    $checkedDays = ipReviewDaysSince($checkedAt);
+    $cleanAge = $checkedDays ?? $ageDays;
+
+    if ($status === 'نظيف' && $malicious === 0 && $suspicious === 0 && $total > 0 && $cleanAge !== null && $cleanAge >= $cleanMinDays) {
+        return [
+            'code' => 'clean',
+            'label' => 'نظيف في VirusTotal',
+            'detail' => 'آخر فحص نظيف منذ ' . $cleanAge . ' يوم.',
+            'priority' => 20,
+        ];
+    }
+
+    $isUnscanned = $status === ''
+        || in_array($status, ['-', 'لم يتم الفحص', 'غير مفعل', 'في الطابور'], true)
+        || (!is_array($row['vt_row'] ?? null) && $total === 0);
+
+    if ($isUnscanned && $ageDays !== null && $ageDays >= $unscannedMinDays) {
+        return [
+            'code' => 'unscanned',
+            'label' => 'قديم وغير مفحوص',
+            'detail' => 'موجود منذ ' . $ageDays . ' يوم بدون نتيجة VirusTotal محفوظة.',
+            'priority' => 30,
+        ];
+    }
+
+    $category = normalizeIpCategory((string) ($row['category'] ?? 'manual'));
+    $highRiskCategories = ['brute_force', 'scanner', 'spam', 'tor', 'malware', 'botnet', 'proxy'];
+    $isDangerous = in_array($status, ['خطير', 'مشبوه'], true) || $malicious > 0 || $suspicious > 0;
+
+    if ($ageDays !== null && $ageDays >= $oldMinDays && !$isDangerous && !in_array($category, $highRiskCategories, true)) {
+        return [
+            'code' => 'old',
+            'label' => 'قديم منخفض الخطورة',
+            'detail' => 'موجود منذ ' . $ageDays . ' يوم ولا يحمل مؤشرات خطورة حالية.',
+            'priority' => 40,
+        ];
+    }
+
+    return [];
+}
+
+function buildIpReviewRows(array $rows, string $mode = 'all'): array
+{
+    $mode = ipReviewMode($mode);
+    $reviewRows = [];
+
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $reason = ipReviewReasonForRow($row);
+
+        if (empty($reason)) {
+            continue;
+        }
+
+        if ($mode !== 'all' && (string) ($reason['code'] ?? '') !== $mode) {
+            continue;
+        }
+
+        $row['review_code'] = (string) ($reason['code'] ?? 'old');
+        $row['review_label'] = (string) ($reason['label'] ?? 'مراجعة');
+        $row['review_detail'] = (string) ($reason['detail'] ?? '');
+        $row['review_priority'] = (int) ($reason['priority'] ?? 90);
+        $reviewRows[] = $row;
+    }
+
+    usort($reviewRows, static function (array $a, array $b): int {
+        $priority = ((int) ($a['review_priority'] ?? 90)) <=> ((int) ($b['review_priority'] ?? 90));
+
+        if ($priority !== 0) {
+            return $priority;
+        }
+
+        return strcmp((string) ($a['added_at'] ?? ''), (string) ($b['added_at'] ?? ''));
+    });
+
+    return $reviewRows;
+}
+
+function ipReviewCounts(array $reviewRows): array
+{
+    $counts = [
+        'all' => count($reviewRows),
+        'expired' => 0,
+        'clean' => 0,
+        'unscanned' => 0,
+        'old' => 0,
+    ];
+
+    foreach ($reviewRows as $row) {
+        $code = (string) ($row['review_code'] ?? '');
+
+        if (array_key_exists($code, $counts)) {
+            $counts[$code]++;
+        }
+    }
+
+    return $counts;
 }
 
 function uniqueRowValues(array $rows, string $key): array

@@ -48,13 +48,14 @@ function allowedAppPage(string $page): string
 {
     $page = strtolower(trim($page));
 
-    return in_array($page, ['dashboard', 'ips', 'logs', 'users', 'settings', 'health'], true) ? $page : 'dashboard';
+    return in_array($page, ['dashboard', 'ips', 'review', 'logs', 'users', 'settings', 'health'], true) ? $page : 'dashboard';
 }
 
 function appPageLabel(string $page): string
 {
     return match ($page) {
         'ips' => 'IPs',
+        'review' => 'Review',
         'logs' => 'Logs',
         'users' => 'Users',
         'settings' => 'Settings',

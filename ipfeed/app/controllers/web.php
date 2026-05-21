@@ -937,7 +937,13 @@ $filteredIpRows = filterIpAdminRows($allIpRows, $ipFilters);
 $filterCountries = uniqueRowValues($allIpRows, 'country');
 $filterAsns = uniqueRowValues($allIpRows, 'vt_asn');
 $filterUsers = uniqueRowValues($allIpRows, 'user');
-$expiredIpCount = count(array_filter($allIpRows, static fn (array $row): bool => expirationState((string) ($row['expires_at'] ?? '')) === 'expired'));
+$reviewMode = ipReviewMode((string) ($_GET['review_mode'] ?? 'all'));
+$allReviewRows = buildIpReviewRows($allIpRows, 'all');
+$reviewCounts = ipReviewCounts($allReviewRows);
+$reviewRows = $reviewMode === 'all'
+    ? $allReviewRows
+    : array_values(array_filter($allReviewRows, static fn (array $row): bool => (string) ($row['review_code'] ?? '') === $reviewMode));
+$expiredIpCount = (int) ($reviewCounts['expired'] ?? 0);
 $recentLoginEvents = recentLoginEvents($databaseFile, 30);
 $activeUsersCount = countActiveUsers($users);
 $currentRoleLabel = roleLabel(currentUserRole($users));
@@ -1076,6 +1082,11 @@ $ipTotalPages = max(1, (int) ceil($ipTotalRows / $rowsPerPage));
 $ipPage = min(positivePageParam('ip_page'), $ipTotalPages);
 $pagedIpRows = array_slice($displayIpRows, ($ipPage - 1) * $rowsPerPage, $rowsPerPage);
 $pagedIps = ipRowsToIps($pagedIpRows);
+
+$reviewTotalRows = count($reviewRows);
+$reviewTotalPages = max(1, (int) ceil($reviewTotalRows / $rowsPerPage));
+$reviewPage = min(positivePageParam('review_page'), $reviewTotalPages);
+$pagedReviewRows = array_slice($reviewRows, ($reviewPage - 1) * $rowsPerPage, $rowsPerPage);
 
 $logLimited = array_slice($log, 0, $maxLogRowsOnScreen);
 $logTotalRows = count($logLimited);
