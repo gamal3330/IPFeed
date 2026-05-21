@@ -744,6 +744,77 @@ function backfillVirusTotalResultsFromLogs(string $databaseFile): void
     }
 }
 
+function runVirusTotalScanNow(
+    string $databaseFile,
+    string $logFile,
+    string $ip,
+    string $apiKey,
+    string $reason,
+    string $username,
+    string $sourceIp,
+    int $freshTtlSeconds,
+    string $action = 'vt_check_now'
+): array {
+    $ip = trim($ip);
+
+    if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        return ['status' => 'invalid', 'message' => 'IP غير صالح.'];
+    }
+
+    if ($apiKey === '') {
+        return ['status' => 'missing_api_key', 'message' => 'مفتاح VirusTotal غير مضبوط.'];
+    }
+
+    $latest = getVirusTotalResult($databaseFile, $ip);
+    if (isVirusTotalResultFresh($latest, $freshTtlSeconds)) {
+        return [
+            'status' => 'skipped_recent',
+            'message' => 'تم تخطيه لأن لديه نتيجة حديثة.',
+            'checked_at' => (string) ($latest['checked_at'] ?? ''),
+            'vt' => $latest,
+        ];
+    }
+
+    $vt = getVirusTotalInfo($ip, $apiKey);
+    $status = (string) ($vt['status'] ?? 'غير معروف');
+    $error = (string) ($vt['error'] ?? '');
+
+    if ($status === 'مؤجل') {
+        return [
+            'status' => 'deferred',
+            'message' => $error !== '' ? $error : 'تم تأجيل الفحص لتجنب تجاوز حدود VirusTotal.',
+            'vt' => $vt,
+        ];
+    }
+
+    saveVirusTotalResult($databaseFile, $ip, $vt);
+    addLog($logFile, array_merge([
+        'action' => $action,
+        'ip' => $ip,
+        'country' => '-',
+        'city' => '-',
+        'isp' => '-',
+        'reason' => $reason,
+        'user' => $username,
+        'time' => date('Y-m-d H:i:s'),
+        'source_ip' => $sourceIp,
+    ], virusTotalLogFields($vt)));
+
+    if ($error !== '') {
+        return [
+            'status' => 'failed',
+            'message' => $error,
+            'vt' => $vt,
+        ];
+    }
+
+    return [
+        'status' => 'completed',
+        'message' => 'تم فحص IP مباشرة.',
+        'vt' => $vt,
+    ];
+}
+
 function enqueueVirusTotalScan(
     string $databaseFile,
     string $ip,

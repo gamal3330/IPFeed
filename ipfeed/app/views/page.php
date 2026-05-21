@@ -2004,7 +2004,7 @@ if (!defined('IP_FEED_APP')) {
                                                 <form method="post" class="inline-form">
                                                     <?= csrfField() ?>
                                                     <input type="hidden" name="check_vt_ip" value="<?= e($ip) ?>">
-                                                    <button type="submit" class="btn btn-secondary" <?= $vtApiKey === '' ? 'disabled' : '' ?>><?= iconSvg('scan') ?> فحص VT</button>
+                                                    <button type="submit" class="btn btn-secondary" <?= $vtApiKey === '' ? 'disabled' : '' ?>><?= iconSvg('scan') ?> فحص مباشر</button>
                                                 </form>
                                                 <form method="post" class="inline-form" onsubmit="return confirm('هل تريد حذف هذا IP؟');">
                                                     <?= csrfField() ?>
@@ -2576,6 +2576,8 @@ if (!defined('IP_FEED_APP')) {
                                     <td>
                                         <?php if (in_array((string) ($row['action'] ?? 'add'), ['delete', 'bulk_delete'], true)): ?>
                                             <span class="badge badge-delete">حذف</span>
+                                        <?php elseif (($row['action'] ?? 'add') === 'vt_check_now'): ?>
+                                            <span class="badge badge-check">فحص مباشر VT</span>
                                         <?php elseif (($row['action'] ?? 'add') === 'vt_check'): ?>
                                             <span class="badge badge-check">فحص VT</span>
                                         <?php elseif (($row['action'] ?? 'add') === 'vt_bulk_check'): ?>

@@ -840,25 +840,47 @@ if ($requestMethod === 'POST') {
         } elseif (!in_array($checkIp, readExistingIps($ipsFile), true)) {
             $error = 'لا يمكن فحص IP غير موجود في القائمة.';
         } else {
-            $queueResult = enqueueVirusTotalScan(
+            $scanResult = runVirusTotalScanNow(
                 $databaseFile,
+                $logFile,
                 $checkIp,
-                'فحص VirusTotal يدوي',
+                $vtApiKey,
+                'فحص VirusTotal مباشر',
                 (string) $_SESSION['user'],
                 getRequestClientIp(),
                 $vtResultFreshTtlSeconds,
-                'vt_check'
+                'vt_check_now'
             );
-            $status = (string) ($queueResult['status'] ?? '');
+            $status = (string) ($scanResult['status'] ?? '');
 
-            if ($status === 'queued') {
-                $message = 'تمت إضافة IP إلى طابور VirusTotal: ' . $checkIp;
+            if ($status === 'completed') {
+                $vt = is_array($scanResult['vt'] ?? null) ? $scanResult['vt'] : [];
+                $message = 'تم فحص IP مباشرة: ' . $checkIp . '، النتيجة: ' . (string) ($vt['status'] ?? 'غير معروف');
             } elseif ($status === 'skipped_recent') {
                 $message = 'لم تتم إعادة الفحص لأن لدى IP نتيجة حديثة: ' . $checkIp;
-            } elseif ($status === 'already_queued') {
-                $message = 'هذا IP موجود بالفعل في طابور VirusTotal: ' . $checkIp;
+            } elseif ($status === 'deferred') {
+                $queueResult = enqueueVirusTotalScan(
+                    $databaseFile,
+                    $checkIp,
+                    'تأجيل فحص VirusTotal المباشر بسبب حدود API',
+                    (string) $_SESSION['user'],
+                    getRequestClientIp(),
+                    $vtResultFreshTtlSeconds,
+                    'vt_check'
+                );
+                $queueStatus = (string) ($queueResult['status'] ?? '');
+
+                if ($queueStatus === 'queued') {
+                    $message = 'تعذر الفحص المباشر الآن بسبب حدود VirusTotal، وتمت إضافة IP للطابور: ' . $checkIp;
+                } elseif ($queueStatus === 'already_queued') {
+                    $message = 'تعذر الفحص المباشر الآن، وهذا IP موجود بالفعل في طابور VirusTotal: ' . $checkIp;
+                } elseif ($queueStatus === 'skipped_recent') {
+                    $message = 'لم تتم إعادة الفحص لأن لدى IP نتيجة حديثة: ' . $checkIp;
+                } else {
+                    $error = (string) ($queueResult['message'] ?? ($scanResult['message'] ?? 'تعذر فحص IP أو إضافته للطابور.'));
+                }
             } else {
-                $error = (string) ($queueResult['message'] ?? 'تعذر إضافة IP إلى طابور VirusTotal.');
+                $error = (string) ($scanResult['message'] ?? 'تعذر فحص IP عبر VirusTotal.');
             }
         }
 
