@@ -353,7 +353,10 @@ if ($requestMethod === 'POST' && isset($_POST['ajax_vt_process_next'])) {
         jsonResponse(['ok' => false, 'error' => 'لم يتم ضبط مفتاح VirusTotal.']);
     }
 
-    $storageIssue = storageError($ipsFile, $logFile);
+    $storageIssue = databaseStorageError($databaseFile);
+    if ($storageIssue === '') {
+        $storageIssue = logWriteError($logFile);
+    }
     if ($storageIssue !== '') {
         jsonResponse(['ok' => false, 'error' => $storageIssue]);
     }
