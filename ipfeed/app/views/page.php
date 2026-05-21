@@ -1793,7 +1793,7 @@ if (!defined('IP_FEED_APP')) {
                             <label for="ipVtStatus">VirusTotal</label>
                             <select id="ipVtStatus" name="vt_status">
                                 <option value="">كل الحالات</option>
-                                <?php foreach (['خطير', 'مشبوه', 'نظيف', 'مؤجل', 'في الطابور', 'نتيجة حديثة'] as $statusOption): ?>
+                                <?php foreach (['خطير', 'مشبوه', 'نظيف', 'غير مفعل', 'مؤجل', 'في الطابور', 'نتيجة حديثة'] as $statusOption): ?>
                                     <option value="<?= e($statusOption) ?>" <?= ($ipFilters['vt_status'] ?? '') === $statusOption ? 'selected' : '' ?>><?= e($statusOption) ?></option>
                                 <?php endforeach; ?>
                                 <option value="__unscanned" <?= ($ipFilters['vt_status'] ?? '') === '__unscanned' ? 'selected' : '' ?>>لم يتم الفحص</option>
